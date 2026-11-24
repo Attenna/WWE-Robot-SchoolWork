@@ -15,10 +15,13 @@
 
 > **动作边界**：当前行走和动作采用运动学脚本，直接设置关节角及基座位姿，保证演示稳定、路线可重复。它不是基于接触力平衡的动态双足步行策略。后续接入 RL、MPC 或导航模块时，可替换 `G1MotionController`，场景和接口无需重写。
 
+开发、接口契约与 Git 协作规范见 [AGENTS.md](AGENTS.md)。
+
 ## 目录
 
 ```text
-g1_wwe_sim/
+WWE-Robot-SchoolWork/
+├── AGENTS.md                    # 开发约定、接口契约与 Git 协作规范
 ├── run_demo.py                  # 图形界面与无界面演示入口
 ├── requirements.txt
 ├── pyproject.toml

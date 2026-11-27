@@ -13,6 +13,8 @@ from typing import Iterable
 import mujoco
 import numpy as np
 
+from .config import RING_APPROACH, ROBOT_START, WALK_SPEED, WALK_STEP_FREQUENCY
+
 
 class Action(str, Enum):
     IDLE = "idle"
@@ -41,8 +43,8 @@ class G1MotionController:
         self.action = Action.IDLE
         self.action_time = 0.0
         self.action_duration = math.inf
-        self.speed = 0.55
-        self.base_position = np.array([-9.4, 0.0, 0.87], dtype=float)
+        self.speed = WALK_SPEED
+        self.base_position = np.array(ROBOT_START, dtype=float)
         self.base_quaternion = np.array([1.0, 0.0, 0.0, 0.0], dtype=float)
         self.walk_start = self.base_position.copy()
         self.walk_target = self.base_position.copy()
@@ -53,7 +55,7 @@ class G1MotionController:
         self.action = Action.IDLE
         self.action_time = 0.0
         self.action_duration = math.inf
-        self.base_position = np.array([-9.4, 0.0, 0.87], dtype=float)
+        self.base_position = np.array(ROBOT_START, dtype=float)
         self.base_quaternion = np.array([1.0, 0.0, 0.0, 0.0], dtype=float)
         self.previous_position = self.base_position.copy()
         self.linear_velocity.fill(0.0)
@@ -65,14 +67,14 @@ class G1MotionController:
         *,
         target: Iterable[float] | None = None,
         duration: float | None = None,
-        speed: float = 0.55,
+        speed: float | None = None,
     ) -> None:
         self.action = Action(action)
         self.action_time = 0.0
-        self.speed = max(0.05, float(speed))
+        self.speed = max(0.05, WALK_SPEED if speed is None else float(speed))
         self.action_duration = math.inf
         if self.action == Action.WALK:
-            target_array = np.array([-4.15, 0.0, 0.87] if target is None else list(target), dtype=float)
+            target_array = np.array(RING_APPROACH if target is None else list(target), dtype=float)
             if target_array.size == 2:
                 target_array = np.array([target_array[0], target_array[1], self.base_position[2]])
             if target_array.shape != (3,):
@@ -92,7 +94,7 @@ class G1MotionController:
         return self.joint_addresses[name]
 
     def _apply_walk(self) -> None:
-        phase = 2.0 * math.pi * 1.35 * self.action_time
+        phase = 2.0 * math.pi * WALK_STEP_FREQUENCY * self.action_time
         swing = math.sin(phase)
         left_lift = max(0.0, math.sin(phase))
         right_lift = max(0.0, -math.sin(phase))
@@ -153,7 +155,8 @@ class G1MotionController:
         elif self.action == Action.BOW:
             self._apply_bow()
 
-        if self.action_time >= self.action_duration:
+        # 消除长时间累加浮点误差，保证第 40 秒整进入 idle，而非多走一帧。
+        if self.action_time + 1e-9 >= self.action_duration:
             if self.action == Action.WALK:
                 self.base_position = self.walk_target.copy()
                 self.qpos[:3] = self.base_position

@@ -15,17 +15,15 @@
 
 > **动作边界**：当前行走和动作采用运动学脚本，直接设置关节角及基座位姿，保证演示稳定、路线可重复。它不是基于接触力平衡的动态双足步行策略。后续接入 RL、MPC 或导航模块时，可替换 `G1MotionController`，场景和接口无需重写。
 
-开发、接口契约与 Git 协作规范见 [AGENTS.md](AGENTS.md)。
-
 ## 目录
 
 ```text
-WWE-Robot-SchoolWork/
-├── AGENTS.md                    # 开发约定、接口契约与 Git 协作规范
+g1_wwe_sim/
 ├── run_demo.py                  # 图形界面与无界面演示入口
 ├── requirements.txt
 ├── pyproject.toml
 ├── g1_arena/
+│   ├── config.py                # 通道、起点、终点、速度与 40 秒配置
 │   ├── simulation.py            # 统一仿真接口
 │   ├── controller.py            # G1 动作脚本与安全状态
 │   └── events.py                # 统一事件数据结构
@@ -47,7 +45,16 @@ WWE-Robot-SchoolWork/
 .\.venv\Scripts\python.exe run_demo.py
 ```
 
-默认流程：机器人从入口出发，沿通道行走，到达擂台外侧后挥手，再庆祝。
+默认流程：机器人从入口出发，以 **0.5 m/s** 沿 **20 m** 有效路径行走，**40 s** 到达擂台外侧，然后挥手 4 s、庆祝 3 s。
+
+基础参数集中在 `g1_arena/config.py`：
+
+```python
+ROBOT_START = (-24.15, 0.0, 0.87)
+RING_APPROACH = (-4.15, 0.0, 0.87)
+WALK_SPEED = 0.5
+WALK_DURATION_SECONDS = 40.0
+```
 
 重新创建依赖环境：
 
@@ -73,7 +80,7 @@ python -m venv .venv
 ```powershell
 .\.venv\Scripts\python.exe run_demo.py --action wave
 .\.venv\Scripts\python.exe run_demo.py --action walk
-.\.venv\Scripts\python.exe run_demo.py --action entrance --headless --seconds 5 --screenshot output\entrance.png
+.\.venv\Scripts\python.exe run_demo.py --action entrance --headless --seconds 40 --screenshot output\entrance.png
 ```
 
 可选相机：`overview`、`entrance`、`ringside`。
@@ -84,8 +91,8 @@ python -m venv .venv
 from g1_arena import ArenaSimulation
 
 with ArenaSimulation() as sim:
-    # 导航模块：给定目标点，单位为米。
-    sim.execute("walk", target=[-4.15, 0.0, 0.87], speed=0.65)
+    # 使用 config.py 默认起点、终点和 0.5 m/s 速度，40 s 到达。
+    sim.execute("walk")
 
     # 感知模块只提交结构化事件，不直接写关节。
     sim.submit_event({
@@ -111,7 +118,7 @@ with ArenaSimulation() as sim:
 
 ## 修改场景与测试
 
-修改 `scripts/generate_scene.py` 中的尺寸、座位或材质参数，然后重新生成：
+优先修改 `g1_arena/config.py` 中的路径和速度；观众席、材质等外观参数位于 `scripts/generate_scene.py`。修改后重新生成：
 
 ```powershell
 .\.venv\Scripts\python.exe scripts\generate_scene.py

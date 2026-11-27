@@ -5,6 +5,7 @@ from __future__ import annotations
 import math
 
 from g1_arena import Action, ArenaSimulation, SimulationEvent
+from g1_arena.config import RING_APPROACH, ROBOT_START, WALK_DURATION_SECONDS, WALK_SPEED
 
 
 def test_model_and_scene() -> None:
@@ -15,16 +16,18 @@ def test_model_and_scene() -> None:
         assert sim.model.ncam == 3
 
 
-def test_walk_reaches_aisle_end() -> None:
+def test_default_walk_takes_40_seconds() -> None:
     with ArenaSimulation() as sim:
-        start_x = sim.get_state()["position"][0]
-        sim.execute(Action.WALK, target=[-6.0, 0.0, 0.87], speed=0.8)
-        for _ in range(600):
-            sim.step()
+        assert sim.get_state()["position"] == list(ROBOT_START)
+        sim.execute(Action.WALK)
+        assert math.isclose(sim.controller.action_duration, WALK_DURATION_SECONDS, abs_tol=1e-9)
+        sim.step(round(1.0 / sim.timestep))
+        assert math.isclose(sim.get_state()["position"][0], ROBOT_START[0] + WALK_SPEED, abs_tol=1e-6)
+        sim.step(round(39.0 / sim.timestep))
         state = sim.get_state()
         assert state["action"] == "idle"
-        assert math.isclose(state["position"][0], -6.0, abs_tol=1e-6)
-        assert state["position"][0] > start_x
+        assert math.isclose(state["time"], WALK_DURATION_SECONDS, abs_tol=1e-6)
+        assert math.isclose(state["position"][0], RING_APPROACH[0], abs_tol=1e-6)
 
 
 def test_wave_and_return_to_idle() -> None:

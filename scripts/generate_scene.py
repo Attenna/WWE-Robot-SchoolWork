@@ -3,11 +3,22 @@
 from __future__ import annotations
 
 from pathlib import Path
+import sys
 
 import numpy as np
 
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from g1_arena.config import (  # noqa: E402
+    AISLE_CENTER_X,
+    AISLE_HALF_LENGTH,
+    STAGE_SCREEN_X,
+    STAGE_TRUSS_X,
+    STAGE_X,
+)
+
 OUTPUT = ROOT / "assets" / "unitree_g1" / "arena.xml"
 
 
@@ -75,22 +86,22 @@ def build() -> str:
         '    <light name="key" pos="-3 -3 9" dir="0 0 -1" directional="true" diffuse="0.75 0.82 1"/>',
         '    <light name="fill" pos="-5 5 7" dir="0 0 -1" directional="true" diffuse="0.50 0.55 0.70"/>',
         '    <light name="ring_spot" pos="0 0 7" dir="0 0 -1" directional="false" attenuation="0.05 0.02 0.005" diffuse="1 0.92 0.80"/>',
-        geom("arena_floor", 'type="plane" pos="0 0 -0.01" size="30 24 0.1" material="arena_floor"'),
-        '    <!-- 入场通道与舞台：x 轴正方向通向擂台 -->',
-        geom("entrance_aisle", 'type="box" pos="-7.60 0 0.035" size="3.85 1.10 0.045" rgba="0.10 0.13 0.22 1"'),
-        geom("aisle_center", 'type="box" pos="-7.60 0 0.083" size="3.80 0.055 0.006" material="blue_led" contype="0" conaffinity="0"'),
-        geom("aisle_edge_left", 'type="box" pos="-7.60 1.12 0.10" size="3.85 0.045 0.10" material="blue_led" contype="0" conaffinity="0"'),
-        geom("aisle_edge_right", 'type="box" pos="-7.60 -1.12 0.10" size="3.85 0.045 0.10" material="red_led" contype="0" conaffinity="0"'),
-        geom("entrance_stage", 'type="box" pos="-11.60 0 0.16" size="1.70 2.60 0.16" rgba="0.07 0.09 0.15 1"'),
-        geom("stage_screen", 'type="box" pos="-12.55 0 2.05" size="0.12 1.55 0.90" material="blue_led" contype="0" conaffinity="0"'),
-        geom("stage_screen_inner", 'type="box" pos="-12.40 0 2.05" size="0.025 1.35 0.72" rgba="0.015 0.025 0.07 1" contype="0" conaffinity="0"'),
-        geom("stage_logo_vertical", 'type="box" pos="-12.36 0 2.05" size="0.018 0.13 0.50" material="red_led" contype="0" conaffinity="0"'),
-        geom("stage_logo_horizontal", 'type="box" pos="-12.35 0 2.05" size="0.018 0.58 0.13" material="red_led" contype="0" conaffinity="0"'),
+        geom("arena_floor", 'type="plane" pos="0 0 -0.01" size="40 24 0.1" material="arena_floor"'),
+        '    <!-- 加长入场通道：有效行走路径 20 m，默认 40 s 完成 -->',
+        geom("entrance_aisle", f'type="box" pos="{AISLE_CENTER_X:.2f} 0 0.035" size="{AISLE_HALF_LENGTH:.2f} 1.10 0.045" rgba="0.10 0.13 0.22 1"'),
+        geom("aisle_center", f'type="box" pos="{AISLE_CENTER_X:.2f} 0 0.083" size="{AISLE_HALF_LENGTH - 0.05:.2f} 0.055 0.006" material="blue_led" contype="0" conaffinity="0"'),
+        geom("aisle_edge_left", f'type="box" pos="{AISLE_CENTER_X:.2f} 1.12 0.10" size="{AISLE_HALF_LENGTH:.2f} 0.045 0.10" material="blue_led" contype="0" conaffinity="0"'),
+        geom("aisle_edge_right", f'type="box" pos="{AISLE_CENTER_X:.2f} -1.12 0.10" size="{AISLE_HALF_LENGTH:.2f} 0.045 0.10" material="red_led" contype="0" conaffinity="0"'),
+        geom("entrance_stage", f'type="box" pos="{STAGE_X:.2f} 0 0.16" size="1.70 2.60 0.16" rgba="0.07 0.09 0.15 1"'),
+        geom("stage_screen", f'type="box" pos="{STAGE_SCREEN_X:.2f} 0 2.05" size="0.12 1.55 0.90" material="blue_led" contype="0" conaffinity="0"'),
+        geom("stage_screen_inner", f'type="box" pos="{STAGE_SCREEN_X + 0.15:.2f} 0 2.05" size="0.025 1.35 0.72" rgba="0.015 0.025 0.07 1" contype="0" conaffinity="0"'),
+        geom("stage_logo_vertical", f'type="box" pos="{STAGE_SCREEN_X + 0.19:.2f} 0 2.05" size="0.018 0.13 0.50" material="red_led" contype="0" conaffinity="0"'),
+        geom("stage_logo_horizontal", f'type="box" pos="{STAGE_SCREEN_X + 0.20:.2f} 0 2.05" size="0.018 0.58 0.13" material="red_led" contype="0" conaffinity="0"'),
     ]
     for side in (-1, 1):
-        out.append(geom(f"stage_truss_{side}", f'type="box" pos="-11.85 {side * 1.90} 1.85" size="0.13 0.13 1.85" material="steel" contype="0" conaffinity="0"'))
+        out.append(geom(f"stage_truss_{side}", f'type="box" pos="{STAGE_TRUSS_X:.2f} {side * 1.90} 1.85" size="0.13 0.13 1.85" material="steel" contype="0" conaffinity="0"'))
     out.extend([
-        geom("stage_truss_top", 'type="box" pos="-11.85 0 3.65" size="0.13 2.03 0.13" material="steel" contype="0" conaffinity="0"'),
+        geom("stage_truss_top", f'type="box" pos="{STAGE_TRUSS_X:.2f} 0 3.65" size="0.13 2.03 0.13" material="steel" contype="0" conaffinity="0"'),
         '    <!-- 20 英尺级四边擂台；台面含围裙约 6.7 米见方 -->',
         geom("ring_base", 'type="box" pos="0 0 0.50" size="3.35 3.35 0.50" material="apron"'),
         geom("ring_canvas", 'type="box" pos="0 0 1.015" size="3.35 3.35 0.025" material="canvas" friction="0.9 0.02 0.01"'),
@@ -129,8 +140,8 @@ def build() -> str:
                 x = -5.55 + col * 1.20
                 out.extend(audience_member(f"fan_{side}_{row}_{col}", x, y, height, colors[(row + col) % len(colors)], wave=(row + col) % 4 == 0))
     out.extend([
-        camera("overview", (-13.5, -12.5, 9.0), (-2.2, 0.0, 0.9), 52),
-        camera("entrance", (-13.8, 4.2, 4.0), (-6.3, 0.0, 1.0), 55),
+        camera("overview", (-31.0, -22.0, 14.0), (-11.5, 0.0, 0.9), 54),
+        camera("entrance", (-29.0, 5.5, 4.5), (-22.0, 0.0, 1.0), 55),
         camera("ringside", (6.8, -8.0, 4.8), (-0.5, 0.0, 1.0), 52),
         '  </worldbody>',
         '</mujoco>',

@@ -34,7 +34,7 @@ def parse_args() -> argparse.Namespace:
 
 def start_action(sim: ArenaSimulation, action: str) -> None:
     if action == "entrance":
-        sim.execute(Action.WALK, target=[-4.15, 0.0, 0.87], speed=0.65)
+        sim.execute(Action.WALK)  # 基础配置：20 m / 0.5 m/s = 40 s
     elif action == "walk":
         sim.execute(Action.WALK)
     elif action != "idle":

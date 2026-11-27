@@ -22,20 +22,20 @@
     <light name="key" pos="-3 -3 9" dir="0 0 -1" directional="true" diffuse="0.75 0.82 1"/>
     <light name="fill" pos="-5 5 7" dir="0 0 -1" directional="true" diffuse="0.50 0.55 0.70"/>
     <light name="ring_spot" pos="0 0 7" dir="0 0 -1" directional="false" attenuation="0.05 0.02 0.005" diffuse="1 0.92 0.80"/>
-    <geom name="arena_floor" type="plane" pos="0 0 -0.01" size="30 24 0.1" material="arena_floor"/>
-    <!-- 入场通道与舞台：x 轴正方向通向擂台 -->
-    <geom name="entrance_aisle" type="box" pos="-7.60 0 0.035" size="3.85 1.10 0.045" rgba="0.10 0.13 0.22 1"/>
-    <geom name="aisle_center" type="box" pos="-7.60 0 0.083" size="3.80 0.055 0.006" material="blue_led" contype="0" conaffinity="0"/>
-    <geom name="aisle_edge_left" type="box" pos="-7.60 1.12 0.10" size="3.85 0.045 0.10" material="blue_led" contype="0" conaffinity="0"/>
-    <geom name="aisle_edge_right" type="box" pos="-7.60 -1.12 0.10" size="3.85 0.045 0.10" material="red_led" contype="0" conaffinity="0"/>
-    <geom name="entrance_stage" type="box" pos="-11.60 0 0.16" size="1.70 2.60 0.16" rgba="0.07 0.09 0.15 1"/>
-    <geom name="stage_screen" type="box" pos="-12.55 0 2.05" size="0.12 1.55 0.90" material="blue_led" contype="0" conaffinity="0"/>
-    <geom name="stage_screen_inner" type="box" pos="-12.40 0 2.05" size="0.025 1.35 0.72" rgba="0.015 0.025 0.07 1" contype="0" conaffinity="0"/>
-    <geom name="stage_logo_vertical" type="box" pos="-12.36 0 2.05" size="0.018 0.13 0.50" material="red_led" contype="0" conaffinity="0"/>
-    <geom name="stage_logo_horizontal" type="box" pos="-12.35 0 2.05" size="0.018 0.58 0.13" material="red_led" contype="0" conaffinity="0"/>
-    <geom name="stage_truss_-1" type="box" pos="-11.85 -1.9 1.85" size="0.13 0.13 1.85" material="steel" contype="0" conaffinity="0"/>
-    <geom name="stage_truss_1" type="box" pos="-11.85 1.9 1.85" size="0.13 0.13 1.85" material="steel" contype="0" conaffinity="0"/>
-    <geom name="stage_truss_top" type="box" pos="-11.85 0 3.65" size="0.13 2.03 0.13" material="steel" contype="0" conaffinity="0"/>
+    <geom name="arena_floor" type="plane" pos="0 0 -0.01" size="40 24 0.1" material="arena_floor"/>
+    <!-- 加长入场通道：有效行走路径 20 m，默认 40 s 完成 -->
+    <geom name="entrance_aisle" type="box" pos="-14.80 0 0.035" size="11.05 1.10 0.045" rgba="0.10 0.13 0.22 1"/>
+    <geom name="aisle_center" type="box" pos="-14.80 0 0.083" size="11.00 0.055 0.006" material="blue_led" contype="0" conaffinity="0"/>
+    <geom name="aisle_edge_left" type="box" pos="-14.80 1.12 0.10" size="11.05 0.045 0.10" material="blue_led" contype="0" conaffinity="0"/>
+    <geom name="aisle_edge_right" type="box" pos="-14.80 -1.12 0.10" size="11.05 0.045 0.10" material="red_led" contype="0" conaffinity="0"/>
+    <geom name="entrance_stage" type="box" pos="-26.45 0 0.16" size="1.70 2.60 0.16" rgba="0.07 0.09 0.15 1"/>
+    <geom name="stage_screen" type="box" pos="-27.40 0 2.05" size="0.12 1.55 0.90" material="blue_led" contype="0" conaffinity="0"/>
+    <geom name="stage_screen_inner" type="box" pos="-27.25 0 2.05" size="0.025 1.35 0.72" rgba="0.015 0.025 0.07 1" contype="0" conaffinity="0"/>
+    <geom name="stage_logo_vertical" type="box" pos="-27.21 0 2.05" size="0.018 0.13 0.50" material="red_led" contype="0" conaffinity="0"/>
+    <geom name="stage_logo_horizontal" type="box" pos="-27.20 0 2.05" size="0.018 0.58 0.13" material="red_led" contype="0" conaffinity="0"/>
+    <geom name="stage_truss_-1" type="box" pos="-26.70 -1.9 1.85" size="0.13 0.13 1.85" material="steel" contype="0" conaffinity="0"/>
+    <geom name="stage_truss_1" type="box" pos="-26.70 1.9 1.85" size="0.13 0.13 1.85" material="steel" contype="0" conaffinity="0"/>
+    <geom name="stage_truss_top" type="box" pos="-26.70 0 3.65" size="0.13 2.03 0.13" material="steel" contype="0" conaffinity="0"/>
     <!-- 20 英尺级四边擂台；台面含围裙约 6.7 米见方 -->
     <geom name="ring_base" type="box" pos="0 0 0.50" size="3.35 3.35 0.50" material="apron"/>
     <geom name="ring_canvas" type="box" pos="0 0 1.015" size="3.35 3.35 0.025" material="canvas" friction="0.9 0.02 0.01"/>
@@ -321,8 +321,8 @@
     <geom name="fan_1_2_7_head" type="sphere" pos="2.85 7.65 1.90" size="0.14" rgba="0.72 0.52 0.38 1" contype="0" conaffinity="0" group="1"/>
     <geom name="fan_1_2_7_arm_-1" type="capsule" fromto="2.85 7.46 1.68 2.90 7.38 1.35" size="0.055" rgba="0.75 0.08 0.12 1" contype="0" conaffinity="0" group="1"/>
     <geom name="fan_1_2_7_arm_1" type="capsule" fromto="2.85 7.84 1.68 2.90 7.92 1.35" size="0.055" rgba="0.75 0.08 0.12 1" contype="0" conaffinity="0" group="1"/>
-    <camera name="overview" pos="-13.5 -12.5 9.0" xyaxes="0.74181690 -0.67060248 0.00000000 0.29053303 0.32138610 0.90127772" fovy="52"/>
-    <camera name="entrance" pos="-13.8 4.2 4.0" xyaxes="-0.48860337 -0.87250602 0.00000000 0.28750051 -0.16100028 0.94415167" fovy="55"/>
+    <camera name="overview" pos="-31.0 -22.0 14.0" xyaxes="0.74834694 -0.66330751 0.00000000 0.26998254 0.30459569 0.91341715" fovy="54"/>
+    <camera name="entrance" pos="-29.0 5.5 4.5" xyaxes="-0.61782155 -0.78631834 0.00000000 0.28771063 -0.22605835 0.93065580" fovy="55"/>
     <camera name="ringside" pos="6.8 -8.0 4.8" xyaxes="0.73868536 0.67405039 -0.00000000 -0.22316887 0.24456863 0.94360047" fovy="52"/>
   </worldbody>
 </mujoco>

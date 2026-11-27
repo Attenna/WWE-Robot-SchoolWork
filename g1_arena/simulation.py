@@ -55,7 +55,7 @@ class ArenaSimulation:
         *,
         target: Iterable[float] | None = None,
         duration: float | None = None,
-        speed: float = 0.55,
+        speed: float | None = None,
     ) -> None:
         requested = Action(action)
         if self.safety_latched and requested != Action.STOP:

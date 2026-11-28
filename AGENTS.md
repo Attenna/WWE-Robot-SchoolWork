@@ -15,6 +15,7 @@
 WWE-Robot-SchoolWork/
 ├── run_demo.py               # 图形界面 / 无界面演示入口
 ├── docs/interaction-zone.md  # 互动区定义、坐标与 CV 约定
+├── docs/real-data-and-wwe.md # 真实手部数据、WWE 素材与版权/评测协议
 ├── g1_arena/
 │   ├── simulation.py         # ArenaSimulation：场景、状态、动作、渲染的统一入口
 │   ├── controller.py         # G1MotionController：29 关节 + 浮动基座的运动学脚本

@@ -14,6 +14,7 @@
 - 结构化事件输入、机器人状态读取、动作执行和 RGB 图像输出。
 - CV 感知层：场景清单、G1 掌心 FK、击掌状态机和 `high_five` 事件（仿真 ground truth 适配器）。
 - `VisionPerception`：检测器 Protocol + 视觉事件适配器；手部世界坐标和 robot palm 由检测器/FK 提供。
+- 公开对接接口 `PerceptionSource` / `HandDetector` / `create_perception`，以及 `docs/perception-integration.md`。
 - 合成 CV 数据集：RGB + 手/应援牌 bbox/keypoint/可见性标签 + 可选 depth/segmentation，清单记录 `scene_hash`。
 - 传统颜色/轮廓基线（无 torch）：固定机位 + 清单 ROI，OpenCV 肤色找手、颜色/边缘找应援牌；含数据集与事件指标评估。
 - 急停／障碍事件优先，锁定后普通互动事件不会覆盖安全停止。
@@ -33,6 +34,7 @@ WWE-Robot-SchoolWork/
 ├── pyproject.toml
 ├── docs/
 │   ├── interaction-zone.md      # 互动区定义、坐标与 CV 约定
+│   ├── perception-integration.md # 视觉检测对接 API、事件与故障排查
 │   └── real-data-and-wwe.md     # 真实手部数据、WWE 素材与版权/评测协议
 ├── g1_arena/
 │   ├── simulation.py            # 统一仿真接口
@@ -42,6 +44,7 @@ WWE-Robot-SchoolWork/
 │   ├── manifest.py              # 场景清单、互动带、相机投影
 │   ├── robot.py                 # G1 掌心 FK 近似
 │   ├── high_five.py             # 击掌状态机与事件
+│   ├── api.py                   # 公开 PerceptionSource / create_perception
 │   ├── dataset.py               # 合成数据集标签 schema 与读取
 │   ├── vision.py                # 检测器 Protocol + 视觉事件适配器
 │   ├── baseline.py              # 传统颜色/轮廓基线（可选 OpenCV）
@@ -66,7 +69,8 @@ WWE-Robot-SchoolWork/
     ├── test_dataset.py          # 合成数据集渲染与标签测试
     ├── test_evaluation.py       # 检测/事件指标测试
     ├── test_baseline.py         # 传统基线数据集验收（需 OpenCV）
-    └── test_real_eval.py        # 真实评估集 schema 与 clip 计划测试
+    ├── test_real_eval.py        # 真实评估集 schema 与 clip 计划测试
+    └── test_perception_api.py   # 公开感知接口测试
 ```
 
 ## 直接运行（Windows）
@@ -131,6 +135,25 @@ for event in perception.poll(sim):
     sim.submit_event(event)  # 事件进入 last_event；动作映射由决策/控制层添加
 ```
 
+### 视觉检测对接
+
+决策层只依赖 `PerceptionSource`：`poll(sim)` 返回事件列表，`reset()` 清状态；检测器实现 `HandDetector.detect(frame, timestamp)`。`create_perception` 可选 `none` / `ground_truth` / `color`。
+
+```python
+from perception import create_perception
+
+perception = create_perception("color", camera="interaction_neg")
+for event in perception.poll(sim):
+    sim.submit_event(event)  # 事件进入 last_event；动作映射由控制层负责
+```
+
+```powershell
+.\.venv\Scripts\python.exe run_demo.py --action interaction --perception color
+.\.venv\Scripts\python.exe run_demo.py --action interaction --perception ground_truth
+```
+
+完整 API、事件字段、真实相机接入和新模型接入步骤见 [docs/perception-integration.md](docs/perception-integration.md)。
+
 ### 合成数据集
 
 ```powershell
@@ -184,7 +207,9 @@ manifest, frames = load_dataset("output/cv_dataset")
 
 序列模式（960×540）得到 1 个 TP、0 FP/FN；处理耗时 p50≈45 ms（含 MuJoCo 渲染），事件时间偏移 0（同步仿真，不代表真实相机延迟）。
 
-### 真实评估集脚手架
+### 真实评估集脚手架（可选）
+
+> 当前课程交付继续用合成数据；WWE 版权素材不纳入训练/验收。本节工具保留为可选能力。
 
 ```powershell
 # 3 张 CC 授权的 WWE 观众/粉丝牌图 → output/real_samples，附 sources.json

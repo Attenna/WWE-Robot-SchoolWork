@@ -23,7 +23,12 @@ from g1_arena import Action, ArenaSimulation
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="宇树 G1 WWE 风格入场互动仿真")
     parser.add_argument("--action", choices=["entrance", "walk", "wave", "celebrate", "bow", "idle", "interaction"], default="entrance")
-    parser.add_argument("--perception", choices=["none", "ground_truth"], default="none", help="感知适配器；ground_truth 用仿真 FK 产生 high_five 事件")
+    parser.add_argument(
+        "--perception",
+        choices=["none", "ground_truth", "color"],
+        default="none",
+        help="感知适配器；ground_truth 用仿真 FK，color 用合成图像颜色/轮廓基线",
+    )
     parser.add_argument("--headless", action="store_true", help="不打开窗口，仅运行仿真")
     parser.add_argument("--seconds", type=float, default=8.0, help="无界面模式的仿真时长")
     parser.add_argument("--screenshot", type=Path, help="结束时保存相机图像")
@@ -43,11 +48,19 @@ def interaction_target() -> list[float]:
 
 
 def make_perception(args: argparse.Namespace):
-    if args.perception == "ground_truth":
-        from perception import GroundTruthPerception
+    if args.perception == "none":
+        return None
+    from perception import create_perception
 
-        return GroundTruthPerception()
-    return None
+    try:
+        return create_perception(
+            args.perception,
+            camera="interaction_neg",
+            width=1280,
+            height=720,
+        )
+    except RuntimeError as exc:
+        raise SystemExit(str(exc)) from exc
 
 
 def poll_perception(sim: ArenaSimulation, perception) -> None:

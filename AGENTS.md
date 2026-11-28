@@ -19,8 +19,9 @@ WWE-Robot-SchoolWork/
 │   ├── simulation.py         # ArenaSimulation：场景、状态、动作、渲染的统一入口
 │   ├── controller.py         # G1MotionController：29 关节 + 浮动基座的运动学脚本
 │   └── events.py             # SimulationEvent：感知/决策/仿真之间唯一的事件结构
-├── perception/               # CV 感知层：清单、掌心 FK、击掌状态机、ground truth 适配器
+├── perception/               # CV 感知层：清单、掌心 FK、击掌、数据集、ground truth 适配器
 ├── scripts/generate_scene.py # 场馆生成源码（尺寸、座位、材质的唯一事实来源）
+├── scripts/render_cv_dataset.py # 合成 CV 数据集渲染器（输出到 output/，不入库）
 ├── assets/unitree_g1/
 │   ├── arena.xml             # 完整仿真场景（由 generate_scene.py 生成）
 │   ├── scene_manifest.json   # 互动区、观众手/牌、相机标定清单（同脚本生成）
@@ -40,6 +41,7 @@ pip install -r requirements.txt -r requirements-dev.txt
 python run_demo.py                 # 图形界面
 python run_demo.py --action entrance --headless --seconds 5 --screenshot output/entrance.png
 python run_demo.py --action interaction --perception ground_truth --headless --seconds 8
+python scripts/render_cv_dataset.py --frames 20 --width 960 --height 540
 python -m pytest -q                # 提交前必须通过
 python scripts/generate_scene.py   # 重新生成 arena.xml 与 scene_manifest.json
 ```

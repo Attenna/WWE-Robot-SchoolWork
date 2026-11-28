@@ -32,7 +32,8 @@ WWE-Robot-SchoolWork/
 ├── requirements-cv.txt          # 可选：opencv-python-headless（传统基线）
 ├── pyproject.toml
 ├── docs/
-│   └── interaction-zone.md      # 互动区定义、坐标与 CV 约定
+│   ├── interaction-zone.md      # 互动区定义、坐标与 CV 约定
+│   └── real-data-and-wwe.md     # 真实手部数据、WWE 素材与版权/评测协议
 ├── g1_arena/
 │   ├── simulation.py            # 统一仿真接口
 │   ├── controller.py            # G1 动作脚本与安全状态
@@ -252,6 +253,7 @@ with ArenaSimulation() as sim:
 ## 资料与模型来源
 
 - 擂台结构参考：[Wrestling ring — Configuration and construction](https://en.wikipedia.org/wiki/Wrestling_ring)。采用方形台面、三层围绳、四角立柱和护垫，不包含八角笼。
+- 真实手部数据、WWE 公开素材、版权边界和真实评估协议见 [docs/real-data-and-wwe.md](docs/real-data-and-wwe.md)。
 - G1 模型：[MuJoCo Menagerie — Unitree G1](https://github.com/google-deepmind/mujoco_menagerie/tree/main/unitree_g1)，BSD-3-Clause，原许可证已随模型保留。
 - Python 接口：[MuJoCo Python 文档](https://mujoco.readthedocs.io/en/stable/python.html)。
 

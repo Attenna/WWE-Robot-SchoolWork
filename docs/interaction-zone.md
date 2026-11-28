@@ -165,6 +165,18 @@ from perception.dataset import load_dataset
 manifest, frames = load_dataset("output/cv_dataset")
 ```
 
+## 传统基线（无 torch）
+
+`perception/baseline.py` 是固定机位 + 清单 ROI 先验的颜色/轮廓基线：在每名观众手/牌的投影位置开 ROI，手用 HSV 肤色 + 轮廓，应援牌用颜色/边缘矩形。它不是通用检测器，世界坐标使用清单锚点，目的是先验证数据集和事件管线。
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements-cv.txt
+.\.venv\Scripts\python.exe scripts\eval_baseline.py --dataset output\cv_dataset
+.\.venv\Scripts\python.exe scripts\eval_baseline.py --sequence --width 960 --height 540
+```
+
+数据集指标由 `perception/evaluation.py` 计算：bbox IoU 匹配、事件时空匹配、latency summary。参考 8 帧 640×360 seed 1：手 P/R/F1 = 1.00/1.00/1.00，应援牌 = 0.72/0.65/0.68，单帧 high-five candidate = 1.00/1.00/1.00，检测器 runtime p50≈1.1 ms。序列模式 960×540 为 1 TP/0 FP/0 FN，处理耗时 p50≈45 ms（含渲染），事件时间偏移 0（同步仿真，不代表真实相机延迟）。
+
 ## 验收
 
 - 清单与 XML 的 `scene_hash` 一致；每个 `fan_int_neg_*` 的 `hand` / `sign` geom 存在。
@@ -176,6 +188,8 @@ manifest, frames = load_dataset("output/cv_dataset")
 
 1. ~~`perception/` 接口 + `GroundTruthPerception`~~（已完成）。
 2. ~~合成数据渲染 + 标签 schema~~（已完成，见 `scripts/render_cv_dataset.py`）。
-3. ~~`VisionPerception` 事件适配器~~（已完成，见 `perception/vision.py`）；下一步接具体手/牌检测模型或传统基线。
-4. `high_five` 事件接入决策/控制，新增 `Action.HIGH_FIVE` 或临时映射到 `WAVE`。
-5. 镜像 `+y` 侧，并按最新版通道长度重新生成清单。
+3. ~~`VisionPerception` 事件适配器~~（已完成，见 `perception/vision.py`）。
+4. ~~传统颜色/轮廓基线 + 数据集/事件指标~~（已完成，见 `perception/baseline.py`、`scripts/eval_baseline.py`）。
+5. 视基线指标决定是否上 YOLO/关键点模型；模型必须能输出 `HandDetection.world` 和 `fan_id`。
+6. `high_five` 事件接入决策/控制，新增 `Action.HIGH_FIVE` 或临时映射到 `WAVE`。
+7. 镜像 `+y` 侧，并按最新版通道长度重新生成清单。

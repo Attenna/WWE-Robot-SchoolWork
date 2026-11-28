@@ -15,6 +15,7 @@
 - CV 感知层：场景清单、G1 掌心 FK、击掌状态机和 `high_five` 事件（仿真 ground truth 适配器）。
 - `VisionPerception`：检测器 Protocol + 视觉事件适配器；手部世界坐标和 robot palm 由检测器/FK 提供。
 - 合成 CV 数据集：RGB + 手/应援牌 bbox/keypoint/可见性标签 + 可选 depth/segmentation，清单记录 `scene_hash`。
+- 传统颜色/轮廓基线（无 torch）：固定机位 + 清单 ROI，OpenCV 肤色找手、颜色/边缘找应援牌；含数据集与事件指标评估。
 - 急停／障碍事件优先，锁定后普通互动事件不会覆盖安全停止。
 
 > **动作边界**：当前行走和动作采用运动学脚本，直接设置关节角及基座位姿，保证演示稳定、路线可重复。它不是基于接触力平衡的动态双足步行策略。后续接入 RL、MPC 或导航模块时，可替换 `G1MotionController`，场景和接口无需重写。
@@ -28,6 +29,7 @@ WWE-Robot-SchoolWork/
 ├── AGENTS.md                    # 开发约定、接口契约与 Git 协作规范
 ├── run_demo.py                  # 图形界面与无界面演示入口
 ├── requirements.txt
+├── requirements-cv.txt          # 可选：opencv-python-headless（传统基线）
 ├── pyproject.toml
 ├── docs/
 │   └── interaction-zone.md      # 互动区定义、坐标与 CV 约定
@@ -41,10 +43,13 @@ WWE-Robot-SchoolWork/
 │   ├── high_five.py             # 击掌状态机与事件
 │   ├── dataset.py               # 合成数据集标签 schema 与读取
 │   ├── vision.py                # 检测器 Protocol + 视觉事件适配器
+│   ├── baseline.py              # 传统颜色/轮廓基线（可选 OpenCV）
+│   ├── evaluation.py            # bbox/事件指标
 │   └── ground_truth.py          # 仿真 ground truth 适配器
 ├── scripts/
 │   ├── generate_scene.py        # 可参数化修改的场馆生成源码
-│   └── render_cv_dataset.py     # 合成 CV 数据集渲染器
+│   ├── render_cv_dataset.py     # 合成 CV 数据集渲染器
+│   └── eval_baseline.py         # 基线数据集/事件评估
 ├── assets/unitree_g1/
 │   ├── arena.xml                # 完整仿真场景
 │   ├── scene_manifest.json      # 互动区、观众手/牌、相机标定清单
@@ -54,7 +59,9 @@ WWE-Robot-SchoolWork/
 └── tests/
     ├── test_smoke.py            # 基础验收测试
     ├── test_perception.py       # 感知层契约与击掌测试
-    └── test_dataset.py          # 合成数据集渲染与标签测试
+    ├── test_dataset.py          # 合成数据集渲染与标签测试
+    ├── test_evaluation.py       # 检测/事件指标测试
+    └── test_baseline.py         # 传统基线数据集验收（需 OpenCV）
 ```
 
 ## 直接运行（Windows）
@@ -145,6 +152,32 @@ from perception.dataset import load_dataset
 
 manifest, frames = load_dataset("output/cv_dataset")
 ```
+
+### 传统基线（无 torch）
+
+需要可选 OpenCV：
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements-cv.txt
+```
+
+```powershell
+# 数据集检测指标
+.\.venv\Scripts\python.exe scripts\eval_baseline.py --dataset output\cv_dataset --out output\cv_eval_dataset.json
+# 仿真序列事件指标
+.\.venv\Scripts\python.exe scripts\eval_baseline.py --sequence --width 960 --height 540 --out output\cv_eval_sequence.json
+```
+
+基线是**固定机位 + 清单 ROI 先验**：在每名观众手/牌的投影位置开 ROI，手用 HSV 肤色 + 轮廓，应援牌用颜色/边缘矩形；没有 torch。世界坐标使用清单锚点，所以它验证的是“数据集 + 事件管线”，不是通用 3D 估计。参考结果（8 帧 640×360，seed 1）：
+
+| 指标 | 结果 |
+|---|---|
+| 手 bbox P / R / F1 | 1.00 / 1.00 / 1.00 |
+| 应援牌 P / R / F1 | 0.72 / 0.65 / 0.68 |
+| 单帧 high-five candidate | 1.00 / 1.00 / 1.00 |
+| 检测器 runtime p50 | ≈1.1 ms |
+
+序列模式（960×540）得到 1 个 TP、0 FP/FN；处理耗时 p50≈45 ms（含 MuJoCo 渲染），事件时间偏移 0（同步仿真，不代表真实相机延迟）。
 
 ### 视觉事件适配器
 

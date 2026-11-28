@@ -117,7 +117,9 @@ CV 只提交结构化事件，不直接写关节。`perception.GroundTruthPercep
 }
 ```
 
-视觉适配器会在 `metadata` 里追加 `track_id`、`bbox`、`camera`，并把 `source` 改为 `vision`。当前 `submit_event` 只映射 `crowd_cheering` / `audience_wave` / 安全事件；`high_five` 只进入 `last_event`，动作映射由决策/控制层添加。`emergency_stop` / `obstacle_detected` 的安全锁存优先于任何 CV 事件。
+`perception.VisionPerception` 已实现适配器接口：检测器返回 `HandDetection`（`fan_id`、`world`、`confidence`、可选 `bbox`/`track_id`），适配器把结果送入同一个 `HighFiveStateMachine`，并在 `metadata` 里追加 `track_id`、`bbox`、`camera`，`source` 为 `vision`。当前还没有具体检测模型/基线，模型部分后续接入。
+
+当前 `submit_event` 只映射 `crowd_cheering` / `audience_wave` / 安全事件；`high_five` 只进入 `last_event`，动作映射由决策/控制层添加。`emergency_stop` / `obstacle_detected` 的安全锁存优先于任何 CV 事件。
 
 ```python
 from perception import GroundTruthPerception
@@ -126,6 +128,41 @@ perception = GroundTruthPerception()
 for event in perception.poll(sim):
     print(event.to_dict())
     sim.submit_event(event)
+```
+
+## 合成数据集
+
+`scripts/render_cv_dataset.py` 从 `interaction_neg` 渲染 RGB，内部用 MuJoCo segmentation 生成手/牌的可见 mask，并把清单里的 3D 锚点投到 2D：
+
+```powershell
+.\.venv\Scripts\python.exe scripts\render_cv_dataset.py --frames 20 --width 960 --height 540
+```
+
+输出 `output/cv_dataset/`：
+
+- `images/000000.png`：RGB（可加 `--save-depth` / `--save-segmentation` 保存 `.npy`）。
+- `labels.jsonl`：每帧 6 名观众的手/牌标签，schema `perception.dataset.v1`。
+- `dataset_manifest.json`：`scene_hash`、相机、分辨率、seed、标签 schema。
+
+单个锚点标签：
+
+```json
+{
+  "world": [-6.68, -3.02, 1.3],
+  "bbox": [165, 115, 171, 121],
+  "keypoint": [168.0, 118.1],
+  "keypoint_visible": true,
+  "visible": true,
+  "pixels": 25
+}
+```
+
+`high_five_candidate` 是单帧距离 ≤0.30 m 的候选（含 `fan_id`、`distance_m`、`robot_hand`），不是最终事件；事件还需要状态机的接近/持续时间/冷却。数据集默认写到 `output/`，不入库；场景一变就按新的 `scene_hash` 重新生成。
+
+```python
+from perception.dataset import load_dataset
+
+manifest, frames = load_dataset("output/cv_dataset")
 ```
 
 ## 验收
@@ -137,7 +174,8 @@ for event in perception.poll(sim):
 
 ## 后续
 
-1. ~~`perception/` 接口 + `GroundTruthPerception`~~（已完成，见 `perception/`）。
-2. 合成数据渲染 + 手/牌检测基线，接 `VisionPerception`，追加 `bbox`/`track_id`/`camera`。
-3. `high_five` 事件接入决策/控制，新增 `Action.HIGH_FIVE` 或临时映射到 `WAVE`。
-4. 镜像 `+y` 侧，并按最新版通道长度重新生成清单。
+1. ~~`perception/` 接口 + `GroundTruthPerception`~~（已完成）。
+2. ~~合成数据渲染 + 标签 schema~~（已完成，见 `scripts/render_cv_dataset.py`）。
+3. ~~`VisionPerception` 事件适配器~~（已完成，见 `perception/vision.py`）；下一步接具体手/牌检测模型或传统基线。
+4. `high_five` 事件接入决策/控制，新增 `Action.HIGH_FIVE` 或临时映射到 `WAVE`。
+5. 镜像 `+y` 侧，并按最新版通道长度重新生成清单。

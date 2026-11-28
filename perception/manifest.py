@@ -132,15 +132,27 @@ class CameraCalibration:
             K=intrinsics,
         )
 
-    def project(self, point: Any) -> tuple[float, float, float]:
-        """返回 (u, v, depth)；depth 是相机前方距离。"""
+    def project(
+        self,
+        point: Any,
+        width: int | None = None,
+        height: int | None = None,
+    ) -> tuple[float, float, float]:
+        """返回 (u, v, depth)；depth 是相机前方距离。
+
+        width/height 用于实际渲染分辨率；默认使用清单中的标称分辨率。
+        """
         rotation = np.asarray(self.R_wc, dtype=float)
         camera_point = rotation.T @ (np.asarray(point, dtype=float) - np.asarray(self.t_wc, dtype=float))
         if camera_point[2] >= 0.0:
             raise ValueError(f"点 {point} 在相机 {self.name} 后方")
-        focal = 0.5 * self.height / math.tan(math.radians(self.fovy_deg) / 2.0)
-        u = 0.5 * self.width + focal * camera_point[0] / -camera_point[2]
-        v = 0.5 * self.height - focal * camera_point[1] / -camera_point[2]
+        image_width = self.width if width is None else int(width)
+        image_height = self.height if height is None else int(height)
+        if image_width <= 0 or image_height <= 0:
+            raise ValueError("投影分辨率必须为正")
+        focal = 0.5 * image_height / math.tan(math.radians(self.fovy_deg) / 2.0)
+        u = 0.5 * image_width + focal * camera_point[0] / -camera_point[2]
+        v = 0.5 * image_height - focal * camera_point[1] / -camera_point[2]
         return float(u), float(v), float(-camera_point[2])
 
 

@@ -7,8 +7,10 @@ import pytest
 from g1_arena import Action, ArenaSimulation, SimulationEvent
 from perception import (
     GroundTruthPerception,
+    HandDetection,
     HighFiveConfig,
     HighFiveStateMachine,
+    VisionPerception,
     load_manifest,
 )
 
@@ -123,6 +125,57 @@ def test_ground_truth_perception_emits_one_high_five() -> None:
         assert state["last_event"]["metadata"]["fan_id"] == fan.id
         assert sim.action == Action.WAVE
         assert not sim.safety_latched
+
+
+class _FakeDetector:
+    def __init__(self, detection: HandDetection) -> None:
+        self.detection = detection
+        self.frames: list[tuple[tuple[int, ...], float]] = []
+
+    def detect(self, frame, timestamp: float) -> list[HandDetection]:
+        self.frames.append((tuple(frame.shape), timestamp))
+        return [self.detection]
+
+
+def test_vision_perception_with_fake_detector() -> None:
+    with ArenaSimulation() as sim:
+        manifest = load_manifest()
+        fan = manifest.fans[len(manifest.fans) // 2]
+        detector = _FakeDetector(
+            HandDetection(
+                fan_id=fan.id,
+                world=fan.hand,
+                confidence=0.92,
+                bbox=(10, 20, 30, 40),
+                track_id=7,
+            )
+        )
+        vision = VisionPerception(
+            detector,
+            manifest=manifest,
+            width=320,
+            height=240,
+        )
+        sim.execute(Action.WALK, target=[fan.hand[0], -2.45, 0.79], speed=1.0)
+        sim.step(600)
+        sim.execute(Action.WAVE, duration=4.0)
+
+        events = []
+        for _ in range(40):
+            sim.step()
+            events.extend(vision.poll(sim))
+
+        assert len(events) == 1
+        event = events[0]
+        assert event.event == "high_five"
+        assert event.source == "vision"
+        assert event.metadata["fan_id"] == fan.id
+        assert event.metadata["bbox"] == [10, 20, 30, 40]
+        assert event.metadata["track_id"] == 7
+        assert event.metadata["camera"] == "interaction_neg"
+        assert event.metadata["distance_m"] <= 0.30
+        assert detector.frames
+        assert detector.frames[0][0] == (240, 320, 3)
 
 
 def test_submit_event_accepts_high_five_without_safety_latch() -> None:

@@ -28,7 +28,7 @@ class ArenaSimulation:
         self.controller = G1MotionController(self.model)
         self.last_event: SimulationEvent | None = None
         self.safety_latched = False
-        self._renderer: mujoco.Renderer | None = None
+        self._renderers: dict[tuple[int, int], mujoco.Renderer] = {}
         self.reset()
 
     @property
@@ -98,15 +98,18 @@ class ArenaSimulation:
         }
 
     def render(self, camera: str = "overview", width: int = 1280, height: int = 720) -> np.ndarray:
-        if self._renderer is None:
-            self._renderer = mujoco.Renderer(self.model, height=height, width=width)
-        self._renderer.update_scene(self.data, camera=camera)
-        return self._renderer.render().copy()
+        key = (int(width), int(height))
+        renderer = self._renderers.get(key)
+        if renderer is None:
+            renderer = mujoco.Renderer(self.model, height=height, width=width)
+            self._renderers[key] = renderer
+        renderer.update_scene(self.data, camera=camera)
+        return renderer.render().copy()
 
     def close(self) -> None:
-        if self._renderer is not None:
-            self._renderer.close()
-            self._renderer = None
+        for renderer in self._renderers.values():
+            renderer.close()
+        self._renderers.clear()
 
     def __enter__(self) -> "ArenaSimulation":
         return self

@@ -13,6 +13,8 @@
 - 4 个固定相机：全景、入口、场边、互动前排。
 - 结构化事件输入、机器人状态读取、动作执行和 RGB 图像输出。
 - CV 感知层：场景清单、G1 掌心 FK、击掌状态机和 `high_five` 事件（仿真 ground truth 适配器）。
+- `VisionPerception`：检测器 Protocol + 视觉事件适配器；手部世界坐标和 robot palm 由检测器/FK 提供。
+- 合成 CV 数据集：RGB + 手/应援牌 bbox/keypoint/可见性标签 + 可选 depth/segmentation，清单记录 `scene_hash`。
 - 急停／障碍事件优先，锁定后普通互动事件不会覆盖安全停止。
 
 > **动作边界**：当前行走和动作采用运动学脚本，直接设置关节角及基座位姿，保证演示稳定、路线可重复。它不是基于接触力平衡的动态双足步行策略。后续接入 RL、MPC 或导航模块时，可替换 `G1MotionController`，场景和接口无需重写。
@@ -37,9 +39,12 @@ WWE-Robot-SchoolWork/
 │   ├── manifest.py              # 场景清单、互动带、相机投影
 │   ├── robot.py                 # G1 掌心 FK 近似
 │   ├── high_five.py             # 击掌状态机与事件
+│   ├── dataset.py               # 合成数据集标签 schema 与读取
+│   ├── vision.py                # 检测器 Protocol + 视觉事件适配器
 │   └── ground_truth.py          # 仿真 ground truth 适配器
 ├── scripts/
-│   └── generate_scene.py        # 可参数化修改的场馆生成源码
+│   ├── generate_scene.py        # 可参数化修改的场馆生成源码
+│   └── render_cv_dataset.py     # 合成 CV 数据集渲染器
 ├── assets/unitree_g1/
 │   ├── arena.xml                # 完整仿真场景
 │   ├── scene_manifest.json      # 互动区、观众手/牌、相机标定清单
@@ -48,7 +53,8 @@ WWE-Robot-SchoolWork/
 │   └── LICENSE                  # G1 模型 BSD-3-Clause 许可证
 └── tests/
     ├── test_smoke.py            # 基础验收测试
-    └── test_perception.py       # 感知层契约与击掌测试
+    ├── test_perception.py       # 感知层契约与击掌测试
+    └── test_dataset.py          # 合成数据集渲染与标签测试
 ```
 
 ## 直接运行（Windows）
@@ -112,6 +118,51 @@ for event in perception.poll(sim):
     print(event.to_dict())
     sim.submit_event(event)  # 事件进入 last_event；动作映射由决策/控制层添加
 ```
+
+### 合成数据集
+
+```powershell
+# 20 帧，960×540，输出到 output/cv_dataset
+.\.venv\Scripts\python.exe scripts\render_cv_dataset.py --frames 20 --width 960 --height 540
+
+# 需要 depth / segmentation 时
+.\.venv\Scripts\python.exe scripts\render_cv_dataset.py --frames 20 --save-depth --save-segmentation
+```
+
+输出结构：
+
+```text
+output/cv_dataset/
+├── images/                 # RGB；可选 *_depth.npy / *_seg.npy
+├── labels.jsonl            # 每帧 6 名观众的手/牌标签
+└── dataset_manifest.json   # scene_hash、相机、尺寸、seed、标签 schema
+```
+
+标签 schema 为 `perception.dataset.v1`，每个锚点包含 `world`、`bbox`、`keypoint`、`keypoint_visible`、`visible`、`pixels`；每帧还包含机器人掌心、`high_five_candidate`（距离 ≤0.30 m 时）。数据集默认写到 `output/`，不入库；场景变更后重新生成。
+
+```python
+from perception.dataset import load_dataset
+
+manifest, frames = load_dataset("output/cv_dataset")
+```
+
+### 视觉事件适配器
+
+`VisionPerception` 不绑定具体模型；检测器实现 `detect(frame, timestamp) -> list[HandDetection]` 即可。`HandDetection.world` 必须是世界坐标（由相机标定/深度得到），`fan_id` 用于关联互动观众。
+
+```python
+from perception import HandDetection, VisionPerception
+
+class MyDetector:
+    def detect(self, frame, timestamp):
+        return [HandDetection(fan_id="fan_int_neg_3", world=(-6.68, -3.02, 1.3), confidence=0.9)]
+
+perception = VisionPerception(MyDetector(), camera="interaction_neg")
+for event in perception.poll(sim):
+    sim.submit_event(event)
+```
+
+仿真里机器人掌心由 FK 提供；真机部署时把 `robot_palms` 换成机器人本体/手部检测的位姿。事件与 `GroundTruthPerception` 完全同构，决策层不需要区分来源。
 
 ## 后续集成
 

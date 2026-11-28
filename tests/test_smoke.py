@@ -90,6 +90,14 @@ def test_interaction_front_row_manifest() -> None:
                 assert 0.0 <= v < camera["height"]
 
 
+def test_render_multiple_resolutions() -> None:
+    with ArenaSimulation() as sim:
+        small = sim.render("overview", 320, 240)
+        large = sim.render("overview", 640, 480)
+        assert small.shape == (240, 320, 3)
+        assert large.shape == (480, 640, 3)
+
+
 def test_walk_reaches_aisle_end() -> None:
     with ArenaSimulation() as sim:
         start_x = sim.get_state()["position"][0]

@@ -19,6 +19,7 @@ WWE-Robot-SchoolWork/
 │   ├── simulation.py         # ArenaSimulation：场景、状态、动作、渲染的统一入口
 │   ├── controller.py         # G1MotionController：29 关节 + 浮动基座的运动学脚本
 │   └── events.py             # SimulationEvent：感知/决策/仿真之间唯一的事件结构
+├── perception/               # CV 感知层：清单、掌心 FK、击掌状态机、ground truth 适配器
 ├── scripts/generate_scene.py # 场馆生成源码（尺寸、座位、材质的唯一事实来源）
 ├── assets/unitree_g1/
 │   ├── arena.xml             # 完整仿真场景（由 generate_scene.py 生成）
@@ -38,6 +39,7 @@ pip install -r requirements.txt -r requirements-dev.txt
 
 python run_demo.py                 # 图形界面
 python run_demo.py --action entrance --headless --seconds 5 --screenshot output/entrance.png
+python run_demo.py --action interaction --perception ground_truth --headless --seconds 8
 python -m pytest -q                # 提交前必须通过
 python scripts/generate_scene.py   # 重新生成 arena.xml 与 scene_manifest.json
 ```
@@ -51,6 +53,7 @@ python scripts/generate_scene.py   # 重新生成 arena.xml 与 scene_manifest.j
 - 坐标：x 沿入场通道指向擂台，y 指向侧方观众席（`±y` 各一侧，当前互动前排位于 `-y` 侧），z 向上；单位米、秒、弧度；四元数顺序 `w, x, y, z`。
 - 动作：`idle`、`walk`、`wave`、`celebrate`、`bow`、`stop`；`walk` 接受 `[x, y]` 或 `[x, y, z]`。
 - 事件：`crowd_cheering`、`audience_wave`、`obstacle_detected`、`emergency_stop`；`confidence >= 0.5` 才生效。
+- CV 可提交 `high_five`（一次击掌，`metadata` 含 `fan_id`、`hand`、`robot_hand`、`distance_m`）；当前只进入 `last_event`，动作映射由决策/控制层添加。
 - `emergency_stop` / `obstacle_detected` 会锁存安全停止，只有 `reset()` 能解除；锁存期间普通事件不得覆盖。
 - 相机名：`overview`、`entrance`、`ringside`、`interaction_neg`；默认步长 1/120 s。
 - `ArenaSimulation` 对外方法保持稳定：`execute`、`submit_event`、`step`、`get_state`、`render`、`reset`、`close`。

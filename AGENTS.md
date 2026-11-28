@@ -15,12 +15,13 @@
 WWE-Robot-SchoolWork/
 ├── run_demo.py               # 图形界面 / 无界面演示入口
 ├── docs/interaction-zone.md  # 互动区定义、坐标与 CV 约定
+├── docs/perception-integration.md # 视觉检测公开 API、事件与对接步骤
 ├── docs/real-data-and-wwe.md # 真实手部数据、WWE 素材与版权/评测协议
 ├── g1_arena/
 │   ├── simulation.py         # ArenaSimulation：场景、状态、动作、渲染的统一入口
 │   ├── controller.py         # G1MotionController：29 关节 + 浮动基座的运动学脚本
 │   └── events.py             # SimulationEvent：感知/决策/仿真之间唯一的事件结构
-├── perception/               # CV 感知层：清单、掌心 FK、击掌、数据集、基线、评估、适配器
+├── perception/               # CV 感知层：公开 API、清单、FK、击掌、数据集、基线、评估
 ├── scripts/generate_scene.py # 场馆生成源码（尺寸、座位、材质的唯一事实来源）
 ├── scripts/render_cv_dataset.py # 合成 CV 数据集渲染器（输出到 output/，不入库）
 ├── scripts/eval_baseline.py  # 传统基线的数据集/事件评估
@@ -45,6 +46,7 @@ pip install -r requirements.txt -r requirements-dev.txt
 python run_demo.py                 # 图形界面
 python run_demo.py --action entrance --headless --seconds 5 --screenshot output/entrance.png
 python run_demo.py --action interaction --perception ground_truth --headless --seconds 8
+python run_demo.py --action interaction --perception color --headless --seconds 8
 python scripts/render_cv_dataset.py --frames 20 --width 960 --height 540
 pip install -r requirements-cv.txt             # 可选：传统基线
 python scripts/eval_baseline.py --dataset output/cv_dataset
@@ -65,6 +67,7 @@ python scripts/generate_scene.py   # 重新生成 arena.xml 与 scene_manifest.j
 - 动作：`idle`、`walk`、`wave`、`celebrate`、`bow`、`stop`；`walk` 接受 `[x, y]` 或 `[x, y, z]`。
 - 事件：`crowd_cheering`、`audience_wave`、`obstacle_detected`、`emergency_stop`；`confidence >= 0.5` 才生效。
 - CV 可提交 `high_five`（一次击掌，`metadata` 含 `fan_id`、`hand`、`robot_hand`、`distance_m`）；当前只进入 `last_event`，动作映射由决策/控制层添加。
+- 感知公开接口：`PerceptionSource.poll(sim) -> list[SimulationEvent]` / `reset()`；检测器实现 `HandDetector.detect(frame, timestamp) -> list[HandDetection]`；`create_perception("none"|"ground_truth"|"color")`。对接细节见 `docs/perception-integration.md`。
 - `emergency_stop` / `obstacle_detected` 会锁存安全停止，只有 `reset()` 能解除；锁存期间普通事件不得覆盖。
 - 相机名：`overview`、`entrance`、`ringside`、`interaction_neg`；默认步长 1/120 s。
 - `ArenaSimulation` 对外方法保持稳定：`execute`、`submit_event`、`step`、`get_state`、`render`、`reset`、`close`。

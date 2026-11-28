@@ -61,9 +61,93 @@
 6. **360° 入场素材**可帮助决定固定相机的高度/FOV/多机位；广播近景可帮助估计真实手部像素尺度。
 7. **音频线索**（击掌的“啪”声）在真实场景可能比纯视觉更稳；可作为后续多模态融合，不在本模块范围。
 
-## 真实评估集方案（建议先做这个）
+## 真实评估集方案（脚手架已落地）
 
 目标：50–100 帧，来自 3–5 个官方入场/击掌片段 + 2–3 张 CC 粉丝牌照片；只存标注和来源，不存帧。
+
+### 50 帧 clip 计划
+
+| clip_id | 内容 | 采样帧数 | 时间范围（近似） |
+|---|---|---|---|
+| `shield_2017` | The Shield 穿人群入场（2017） | 12 | 00:20–02:20 |
+| `edge_1999` | Edge 穿人群入场（1999） | 12 | 00:20–02:20 |
+| `jey_sami` | Jey Uso & Sami Zayn 穿人群入场 | 12 | 00:20–02:20 |
+| `wwe_360` | WWE 360° 入场（2017） | 14 | 00:30–02:30 |
+| **合计** | | **50** | |
+
+时间范围是近似值，第一次浏览后按实际镜头调整；只从有权限的来源抽帧，不提交视频/帧。
+
+### 工具
+
+```powershell
+# 1) 下载 3 张 CC 授权的 WWE 粉丝牌/观众图到 output/real_samples，并写 sources.json
+.\.venv\Scripts\python.exe scripts\prepare_real_eval.py fetch-cc
+
+# 2) 生成 50 帧 clip 清单 output/real_eval/clips.json
+.\.venv\Scripts\python.exe scripts\prepare_real_eval.py plan
+
+# 3) 如果你有本地、有权限的视频，按 clip 计划抽帧（不下载视频）
+.\.venv\Scripts\python.exe scripts\extract_clip_frames.py --clip-id shield_2017 --video D:\path\shield.mp4
+
+# 4) 从本地抽帧目录生成标注骨架（每张图一行 JSONL）
+.\.venv\Scripts\python.exe scripts\prepare_real_eval.py init-labels --frames-dir output/real_eval/frames --clip-id shield_2017
+
+# 5) 检查标注、图片存在性和高五引用
+.\.venv\Scripts\python.exe scripts\prepare_real_eval.py check
+```
+
+`fetch-cc` 下载的是：
+- `wwe_smackdown_fans_signs.jpg`（CC BY 2.0，jenn / happyskrappy）
+- `sign_guy_dudley.jpg`（CC BY-SA 2.0，Mr Jonathan Ice）
+- `wwe_sign_guy.jpg`（CC BY-SA 2.0，Matt Brink）
+
+它们在 `output/real_samples/`，不入库；`sources.json` 里有作者/许可/来源。它们用于真实风格/牌子/观众密度参考，不替代 50 帧 clip 评估集。
+
+### 标注 schema
+
+代码：`perception/real_eval.py`，schema 名 `real-eval.v1`。每帧一个 JSONL 对象：
+
+```json
+{
+  "schema_version": 1,
+  "clip_id": "shield_2017",
+  "source_url": "https://youtube.com/watch?v=Lf50KrdASTI",
+  "timecode_s": 42.5,
+  "image": "frame_0001.png",
+  "width": 1280,
+  "height": 720,
+  "shot": "medium",
+  "blur": "mild",
+  "hands": [
+    {
+      "hand_id": "fan_hand_1",
+      "bbox": [640, 300, 700, 360],
+      "side": "right",
+      "visibility": "partial",
+      "keypoints": [[660, 320, 1], [670, 330, 1], [680, 340, 1], [690, 350, 1], [700, 360, 1]],
+      "keypoint_format": 5,
+      "role": "fan",
+      "glove": false,
+      "wristband": true
+    }
+  ],
+  "signs": [
+    {"bbox": [500, 180, 760, 300], "text": "IT'S ALIVE!!!", "occludes_hands": true}
+  ],
+  "high_five": {
+    "present": true,
+    "fan_hand_id": "fan_hand_1",
+    "wrestler_hand_id": "wrestler_hand_1"
+  },
+  "notes": ""
+}
+```
+
+- `keypoint_format` 支持 5 或 21；`keypoints` 为空表示只标框。
+- `visibility`：`full` / `partial` / `occluded`；`glove`/`wristband` 记录真实域难点。
+- `shot`：`wide` / `medium` / `close` / `unknown`；`blur`：`none` / `mild` / `heavy` / `unknown`。
+- `high_five.present=true` 时 `fan_hand_id` / `wrestler_hand_id` 必须存在。
+- `check` 会校验 bbox、图片存在性、keypoint 数量和高五引用。
 
 标注字段：
 

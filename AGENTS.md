@@ -24,6 +24,8 @@ WWE-Robot-SchoolWork/
 ├── scripts/generate_scene.py # 场馆生成源码（尺寸、座位、材质的唯一事实来源）
 ├── scripts/render_cv_dataset.py # 合成 CV 数据集渲染器（输出到 output/，不入库）
 ├── scripts/eval_baseline.py  # 传统基线的数据集/事件评估
+├── scripts/prepare_real_eval.py # CC 图片、50 帧 clip 清单、真实标注骨架
+├── scripts/extract_clip_frames.py # 从本地有权限视频按 clip 计划抽帧
 ├── assets/unitree_g1/
 │   ├── arena.xml             # 完整仿真场景（由 generate_scene.py 生成）
 │   ├── scene_manifest.json   # 互动区、观众手/牌、相机标定清单（同脚本生成）
@@ -47,6 +49,8 @@ python scripts/render_cv_dataset.py --frames 20 --width 960 --height 540
 pip install -r requirements-cv.txt             # 可选：传统基线
 python scripts/eval_baseline.py --dataset output/cv_dataset
 python scripts/eval_baseline.py --sequence --width 960 --height 540
+python scripts/prepare_real_eval.py plan
+python scripts/extract_clip_frames.py --clip-id shield_2017 --video D:\path\shield.mp4
 python -m pytest -q                # 提交前必须通过
 python scripts/generate_scene.py   # 重新生成 arena.xml 与 scene_manifest.json
 ```

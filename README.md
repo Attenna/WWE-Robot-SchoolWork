@@ -46,11 +46,14 @@ WWE-Robot-SchoolWork/
 │   ├── vision.py                # 检测器 Protocol + 视觉事件适配器
 │   ├── baseline.py              # 传统颜色/轮廓基线（可选 OpenCV）
 │   ├── evaluation.py            # bbox/事件指标
+│   ├── real_eval.py             # 真实评估集 schema
 │   └── ground_truth.py          # 仿真 ground truth 适配器
 ├── scripts/
 │   ├── generate_scene.py        # 可参数化修改的场馆生成源码
 │   ├── render_cv_dataset.py     # 合成 CV 数据集渲染器
-│   └── eval_baseline.py         # 基线数据集/事件评估
+│   ├── eval_baseline.py         # 基线数据集/事件评估
+│   ├── prepare_real_eval.py     # CC 图片、50 帧 clip 清单、标注骨架
+│   └── extract_clip_frames.py   # 从本地有权限视频按 clip 计划抽帧
 ├── assets/unitree_g1/
 │   ├── arena.xml                # 完整仿真场景
 │   ├── scene_manifest.json      # 互动区、观众手/牌、相机标定清单
@@ -62,7 +65,8 @@ WWE-Robot-SchoolWork/
     ├── test_perception.py       # 感知层契约与击掌测试
     ├── test_dataset.py          # 合成数据集渲染与标签测试
     ├── test_evaluation.py       # 检测/事件指标测试
-    └── test_baseline.py         # 传统基线数据集验收（需 OpenCV）
+    ├── test_baseline.py         # 传统基线数据集验收（需 OpenCV）
+    └── test_real_eval.py        # 真实评估集 schema 与 clip 计划测试
 ```
 
 ## 直接运行（Windows）
@@ -179,6 +183,25 @@ manifest, frames = load_dataset("output/cv_dataset")
 | 检测器 runtime p50 | ≈1.1 ms |
 
 序列模式（960×540）得到 1 个 TP、0 FP/FN；处理耗时 p50≈45 ms（含 MuJoCo 渲染），事件时间偏移 0（同步仿真，不代表真实相机延迟）。
+
+### 真实评估集脚手架
+
+```powershell
+# 3 张 CC 授权的 WWE 观众/粉丝牌图 → output/real_samples，附 sources.json
+.\.venv\Scripts\python.exe scripts\prepare_real_eval.py fetch-cc
+
+# 50 帧 clip 清单 → output/real_eval/clips.json
+.\.venv\Scripts\python.exe scripts\prepare_real_eval.py plan
+
+# 如果你有本地、有权限的视频，按 clip 计划抽帧（不下载视频）
+.\.venv\Scripts\python.exe scripts\extract_clip_frames.py --clip-id shield_2017 --video D:\path\shield.mp4
+
+# 从本地抽帧目录生成标注骨架，再用 CVAT/Label Studio 或手填 JSONL
+.\.venv\Scripts\python.exe scripts\prepare_real_eval.py init-labels --frames-dir output/real_eval/frames --clip-id shield_2017
+.\.venv\Scripts\python.exe scripts\prepare_real_eval.py check
+```
+
+50 帧来自 4 个官方入场/360° 片段（Shield 2017、Edge 1999、Jey Uso & Sami Zayn、WWE 360°），只存标注和来源，不提交视频/帧。schema `real-eval.v1` 支持手 bbox/5/21 关键点、可见性、手套/护腕、应援牌 bbox/文字、击掌引用。详见 [docs/real-data-and-wwe.md](docs/real-data-and-wwe.md)。
 
 ### 视觉事件适配器
 

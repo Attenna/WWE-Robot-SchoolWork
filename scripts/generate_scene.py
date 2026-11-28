@@ -33,8 +33,21 @@ INTERACTION_HAND_Y = -3.02
 INTERACTION_HAND_Z = 1.30
 INTERACTION_SIGN_Y = -3.05
 INTERACTION_SIGN_Z = 1.85
+INTERACTION_SIGN_LOW_Y = -3.30
+INTERACTION_SIGN_LOW_Z = 1.15
+INTERACTION_HAND_DOWN_Y = -3.62
+INTERACTION_HAND_DOWN_Z = 0.95
 INTERACTION_ZONE_Z_MAX = 2.10
 INTERACTION_FAN_COUNT = max(4, int((INTERACTION_X_MAX - INTERACTION_X_MIN) / 0.80) + 1)
+# (sign_raised, hand_reaching)；fan_int_neg_3 是演示用的正样本。
+INTERACTION_VARIANTS = [
+    (True, True),
+    (True, False),
+    (False, True),
+    (True, True),
+    (False, False),
+    (True, False),
+]
 
 AUDIENCE_COLORS = ["0.15 0.35 0.80 1", "0.75 0.08 0.12 1", "0.12 0.55 0.35 1", "0.65 0.45 0.12 1"]
 SIGN_COLORS = ["0.95 0.75 0.10 1", "0.90 0.15 0.20 1", "0.15 0.55 0.95 1", "0.15 0.80 0.45 1"]
@@ -139,18 +152,54 @@ def interaction_fan_xs() -> list[float]:
     return [INTERACTION_X_MIN + margin + index * step for index in range(INTERACTION_FAN_COUNT)]
 
 
-def interaction_fan(name: str, x: float, color: str, sign_color: str) -> list[str]:
+def interaction_hand(x: float, hand_reaching: bool) -> tuple[float, float, float]:
+    if hand_reaching:
+        return x, INTERACTION_HAND_Y, INTERACTION_HAND_Z
+    return x + 0.20, INTERACTION_FAN_Y + 0.03, INTERACTION_HAND_DOWN_Z
+
+
+def interaction_sign(x: float, sign_raised: bool) -> tuple[float, float, float]:
+    if sign_raised:
+        return x, INTERACTION_SIGN_Y, INTERACTION_SIGN_Z
+    return x, INTERACTION_SIGN_LOW_Y, INTERACTION_SIGN_LOW_Z
+
+
+def interaction_fan(
+    name: str,
+    x: float,
+    color: str,
+    sign_color: str,
+    *,
+    sign_raised: bool,
+    hand_reaching: bool,
+) -> list[str]:
     """站立互动观众；手和应援牌是独立 geom，便于 CV 分割与标注。"""
     common = 'contype="0" conaffinity="0" group="1"'
     y = INTERACTION_FAN_Y
+    hand_x, hand_y, hand_z = interaction_hand(x, hand_reaching)
+    sign_x, sign_y, sign_z = interaction_sign(x, sign_raised)
+    if hand_reaching:
+        arm_start = (x, y, 1.25)
+        arm_end = (hand_x, hand_y + 0.04, hand_z - 0.02)
+    else:
+        arm_start = (x + 0.18, y, 1.25)
+        arm_end = (hand_x, hand_y - 0.03, hand_z + 0.03)
     return [
         geom(name + "_legs", f'type="capsule" fromto="{x:.2f} {y:.2f} 0.04 {x:.2f} {y:.2f} 0.58" size="0.12" rgba="0.08 0.10 0.16 1" {common}'),
         geom(name + "_body", f'type="capsule" pos="{x:.2f} {y:.2f} 0.95" size="0.17 0.30" rgba="{color}" {common}'),
         geom(name + "_head", f'type="sphere" pos="{x:.2f} {y:.2f} 1.55" size="0.14" rgba="0.72 0.52 0.38 1" {common}'),
-        geom(name + "_arm", f'type="capsule" fromto="{x:.2f} {y:.2f} 1.25 {x:.2f} {INTERACTION_HAND_Y + 0.04:.2f} 1.28" size="0.055" rgba="{color}" {common}'),
-        geom(name + "_hand", f'type="sphere" pos="{x:.2f} {INTERACTION_HAND_Y:.2f} {INTERACTION_HAND_Z:.2f}" size="0.075" rgba="0.78 0.58 0.42 1" {common}'),
-        geom(name + "_sign", f'type="box" pos="{x:.2f} {INTERACTION_SIGN_Y:.2f} {INTERACTION_SIGN_Z:.2f}" size="0.22 0.02 0.15" rgba="{sign_color}" {common}'),
-        geom(name + "_sign_handle", f'type="capsule" fromto="{x:.2f} {INTERACTION_HAND_Y:.2f} 1.33 {x:.2f} {INTERACTION_SIGN_Y:.2f} 1.70" size="0.02" rgba="0.35 0.32 0.28 1" {common}'),
+        geom(
+            name + "_arm",
+            f'type="capsule" fromto="{arm_start[0]:.2f} {arm_start[1]:.2f} {arm_start[2]:.2f} '
+            f'{arm_end[0]:.2f} {arm_end[1]:.2f} {arm_end[2]:.2f}" size="0.055" rgba="{color}" {common}',
+        ),
+        geom(name + "_hand", f'type="sphere" pos="{hand_x:.2f} {hand_y:.2f} {hand_z:.2f}" size="0.075" rgba="0.78 0.58 0.42 1" {common}'),
+        geom(name + "_sign", f'type="box" pos="{sign_x:.2f} {sign_y:.2f} {sign_z:.2f}" size="0.22 0.02 0.15" rgba="{sign_color}" {common}'),
+        geom(
+            name + "_sign_handle",
+            f'type="capsule" fromto="{x:.2f} {y + 0.05:.2f} 1.10 {sign_x:.2f} {sign_y:.2f} {sign_z - 0.15:.2f}" '
+            f'size="0.02" rgba="0.35 0.32 0.28 1" {common}',
+        ),
     ]
 
 
@@ -169,12 +218,15 @@ def interaction_group() -> list[str]:
         geom("interaction_zone_end_east", f'type="box" pos="{INTERACTION_X_MAX:.2f} {zone_center_y:.2f} 0.02" size="0.03 {zone_half_y:.2f} 0.006" material="green_led" contype="0" conaffinity="0"'),
     ]
     for index, x in enumerate(interaction_fan_xs()):
+        sign_raised, hand_reaching = INTERACTION_VARIANTS[index % len(INTERACTION_VARIANTS)]
         out.extend(
             interaction_fan(
                 f"fan_int_neg_{index}",
                 x,
                 AUDIENCE_COLORS[index % len(AUDIENCE_COLORS)],
                 SIGN_COLORS[index % len(SIGN_COLORS)],
+                sign_raised=sign_raised,
+                hand_reaching=hand_reaching,
             )
         )
     return out
@@ -281,14 +333,19 @@ def build() -> str:
 def build_manifest(xml: str, scene_hash: str | None = None) -> dict[str, object]:
     fans = []
     for index, x in enumerate(interaction_fan_xs()):
+        sign_raised, hand_reaching = INTERACTION_VARIANTS[index % len(INTERACTION_VARIANTS)]
+        hand_x, hand_y, hand_z = interaction_hand(x, hand_reaching)
+        sign_x, sign_y, sign_z = interaction_sign(x, sign_raised)
         fans.append(
             {
                 "id": f"fan_int_neg_{index}",
-                "hand_side": "raised",
+                "hand_side": "raised" if hand_reaching else "down",
+                "hand_reaching": hand_reaching,
+                "sign_raised": sign_raised,
                 "x": round(x, 3),
                 "body": [round(x, 3), INTERACTION_FAN_Y, 0.95],
-                "hand": [round(x, 3), INTERACTION_HAND_Y, INTERACTION_HAND_Z],
-                "sign": [round(x, 3), INTERACTION_SIGN_Y, INTERACTION_SIGN_Z],
+                "hand": [round(hand_x, 3), round(hand_y, 3), round(hand_z, 3)],
+                "sign": [round(sign_x, 3), round(sign_y, 3), round(sign_z, 3)],
                 "hand_geom": f"fan_int_neg_{index}_hand",
                 "sign_geom": f"fan_int_neg_{index}_sign",
             }

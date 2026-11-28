@@ -114,7 +114,31 @@ class HandDetector(Protocol):
 
 检测器负责把 2D 框/关键点转成世界坐标（相机标定或互动平面），并给出 `fan_id`。没有 world 坐标时不要伪造；应先补标定/平面假设。
 
-### 2.4 VisionPerception
+### 2.4 原始检测流（给 CCC）
+
+如果对接方要做“是否举牌/是否伸手/是否击掌”的语义，不要从 `high_five` 事件反推；直接用原始检测：
+
+```python
+from perception import create_detector
+
+detector = create_detector("color", camera="interaction_neg")
+frame = detector.detect(sim)      # DetectionFrame
+# 或真实相机：frame = detector.process(frame_rgb, timestamp)
+
+for hand in frame.hands:
+    print(hand.fan_id, hand.bbox, hand.world, hand.confidence)
+for sign in frame.signs:
+    print(sign.fan_id, sign.bbox, sign.world, sign.confidence)
+```
+
+- `DetectorSource.detect(sim)` / `process(frame, timestamp)` 只输出手/牌，不判断语义。
+- `DetectionFrame` 包含 `hands`、`signs`、`timestamp`、`camera`、`width`、`height`。
+- `HandDetection`：`fan_id`、`world`、`confidence`、`hand`、`bbox`、`track_id`。
+- `SignDetection`：`fan_id`、`world`、`bbox`、`confidence`。
+- 合成数据的 `scene_manifest.json` 还带 `hand_reaching` / `sign_raised` 真值，可用于 CCC 的语义测试。
+- 职责拆分和 CCC 的接入示例见 [ccc-handoff.md](ccc-handoff.md)。
+
+### 2.5 VisionPerception
 
 ```python
 from perception import VisionPerception
@@ -141,7 +165,7 @@ events = perception.process(frame_rgb, timestamp, robot_palms)
 
 `robot_palms` 是 `{"left": np.ndarray(3), "right": np.ndarray(3)}`；真机用本体 FK/手部检测提供。
 
-### 2.5 GroundTruthPerception / ColorContourDetector
+### 2.6 GroundTruthPerception / ColorContourDetector
 
 - `GroundTruthPerception.poll(sim)`：用清单的观众手锚点和 G1 FK 掌心，不读图像；用于测试和对照。
 - `ColorContourDetector`：固定机位 + 清单 ROI；手用 HSV 肤色 + 轮廓，应援牌用颜色/边缘矩形。**不是通用检测器**，只用于合成数据和固定安装场景。
@@ -236,7 +260,7 @@ perception = VisionPerception(MyDetector(), camera="interaction_neg")
 
 - 检测：手 bbox P/R/F1、关键点误差、牌子 F1；用 `perception.evaluation`。
 - 事件：`high_five` 事件级 recall/FP、时间偏移、处理耗时；不要用帧级 mAP 代替事件验收。
-- 当前合成基线参考（8 帧 640×360 seed 1）：手 P/R=1.0，牌 F1=0.68，candidate=1.0，检测器 runtime p50≈1.1 ms；960×540 序列 1 TP/0 FP/0 FN，处理 p50≈45 ms（含渲染）。
+- 当前合成基线参考（8 帧 640×360 seed 1，原始检测含不伸手样本）：手 P/R/F1=0.75/0.94/0.83，牌 F1=0.76，candidate=1.0，检测器 runtime p50≈1.0 ms；960×540 序列 1 TP/0 FP/0 FN，处理 p50≈45 ms（含渲染）。事件路径默认只考虑伸手的观众。
 - 命令：
   ```powershell
   .\.venv\Scripts\python.exe scripts\render_cv_dataset.py --frames 8 --width 640 --height 360 --seed 1

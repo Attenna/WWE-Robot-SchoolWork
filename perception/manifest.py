@@ -78,6 +78,8 @@ class FanAnchor:
     hand_geom: str
     sign_geom: str
     hand_side: str = "raised"
+    hand_reaching: bool = True
+    sign_raised: bool = True
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "FanAnchor":
@@ -88,6 +90,8 @@ class FanAnchor:
             hand_geom=str(data["hand_geom"]),
             sign_geom=str(data["sign_geom"]),
             hand_side=str(data.get("hand_side", "raised")),
+            hand_reaching=bool(data.get("hand_reaching", True)),
+            sign_raised=bool(data.get("sign_raised", True)),
         )
 
 
@@ -183,8 +187,8 @@ class SceneManifest:
             for name, item in data["cameras"].items()
         }
         for fan in fans:
-            if not zone.contains(fan.hand):
-                raise ValueError(f"{fan.id} 的手锚点不在互动带内：{fan.hand}")
+            if fan.hand_reaching and not zone.contains(fan.hand):
+                raise ValueError(f"{fan.id} 的伸手锚点不在互动带内：{fan.hand}")
         return cls(
             path=manifest_path,
             schema_version=version,

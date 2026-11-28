@@ -2,7 +2,7 @@
   "schema_version": 1,
   "generated_by": "scripts/generate_scene.py",
   "scene": "G1 interactive entrance arena",
-  "scene_hash": "9e4cb9f4c0992fd9bb0ef246a54509888a4c23af8370f634778a6c1866e9f6b1",
+  "scene_hash": "9c5304ad19535c82371b1f7109f165b09be1c43a49285894e908db86fde0ea8f",
   "scene_hash_note": "SHA-256 of the UTF-8 XML normalized to LF newlines.",
   "coordinate_system": "MuJoCo world; x toward ring; y toward side stands; z up; meters; quaternion wxyz",
   "aisle": {
@@ -45,6 +45,8 @@
     {
       "id": "fan_int_neg_0",
       "hand_side": "raised",
+      "hand_reaching": true,
+      "sign_raised": true,
       "x": -8.9,
       "body": [
         -8.9,
@@ -66,7 +68,9 @@
     },
     {
       "id": "fan_int_neg_1",
-      "hand_side": "raised",
+      "hand_side": "down",
+      "hand_reaching": false,
+      "sign_raised": true,
       "x": -8.16,
       "body": [
         -8.16,
@@ -74,9 +78,9 @@
         0.95
       ],
       "hand": [
-        -8.16,
-        -3.02,
-        1.3
+        -7.96,
+        -3.62,
+        0.95
       ],
       "sign": [
         -8.16,
@@ -89,6 +93,8 @@
     {
       "id": "fan_int_neg_2",
       "hand_side": "raised",
+      "hand_reaching": true,
+      "sign_raised": false,
       "x": -7.42,
       "body": [
         -7.42,
@@ -102,8 +108,8 @@
       ],
       "sign": [
         -7.42,
-        -3.05,
-        1.85
+        -3.3,
+        1.15
       ],
       "hand_geom": "fan_int_neg_2_hand",
       "sign_geom": "fan_int_neg_2_sign"
@@ -111,6 +117,8 @@
     {
       "id": "fan_int_neg_3",
       "hand_side": "raised",
+      "hand_reaching": true,
+      "sign_raised": true,
       "x": -6.68,
       "body": [
         -6.68,
@@ -132,7 +140,9 @@
     },
     {
       "id": "fan_int_neg_4",
-      "hand_side": "raised",
+      "hand_side": "down",
+      "hand_reaching": false,
+      "sign_raised": false,
       "x": -5.94,
       "body": [
         -5.94,
@@ -140,21 +150,23 @@
         0.95
       ],
       "hand": [
-        -5.94,
-        -3.02,
-        1.3
+        -5.74,
+        -3.62,
+        0.95
       ],
       "sign": [
         -5.94,
-        -3.05,
-        1.85
+        -3.3,
+        1.15
       ],
       "hand_geom": "fan_int_neg_4_hand",
       "sign_geom": "fan_int_neg_4_sign"
     },
     {
       "id": "fan_int_neg_5",
-      "hand_side": "raised",
+      "hand_side": "down",
+      "hand_reaching": false,
+      "sign_raised": true,
       "x": -5.2,
       "body": [
         -5.2,
@@ -162,9 +174,9 @@
         0.95
       ],
       "hand": [
-        -5.2,
-        -3.02,
-        1.3
+        -5.0,
+        -3.62,
+        0.95
       ],
       "sign": [
         -5.2,

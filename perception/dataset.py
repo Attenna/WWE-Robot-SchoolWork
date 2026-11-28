@@ -77,6 +77,8 @@ class FanLabel:
     fan_id: str
     hand: AnchorLabel
     sign: AnchorLabel
+    hand_reaching: bool = True
+    sign_raised: bool = True
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "FanLabel":
@@ -85,6 +87,8 @@ class FanLabel:
             fan_id=fan_id,
             hand=AnchorLabel.from_dict(data["hand"], f"{fan_id}.hand"),
             sign=AnchorLabel.from_dict(data["sign"], f"{fan_id}.sign"),
+            hand_reaching=bool(data.get("hand_reaching", True)),
+            sign_raised=bool(data.get("sign_raised", True)),
         )
 
 

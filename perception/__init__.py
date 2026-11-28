@@ -2,6 +2,14 @@
 
 from .api import NullPerception, PerceptionSource, create_perception
 from .dataset import DatasetManifest, FrameLabel, load_dataset, load_frame_labels
+from .detection import (
+    DetectionFrame,
+    DetectorSource,
+    FrameDetectionSource,
+    GroundTruthDetectorSource,
+    NullDetectorSource,
+    create_detector,
+)
 from .ground_truth import GroundTruthPerception
 from .high_five import HighFiveConfig, HighFiveStateMachine
 from .manifest import (
@@ -12,23 +20,30 @@ from .manifest import (
     load_manifest,
 )
 from .robot import hand_positions
-from .vision import HandDetection, HandDetector, VisionPerception
+from .vision import HandDetection, HandDetector, SignDetection, VisionPerception
 
 __all__ = [
     "CameraCalibration",
     "DatasetManifest",
+    "DetectionFrame",
+    "DetectorSource",
     "FanAnchor",
+    "FrameDetectionSource",
     "FrameLabel",
+    "GroundTruthDetectorSource",
     "GroundTruthPerception",
     "HandDetection",
     "HandDetector",
     "HighFiveConfig",
     "HighFiveStateMachine",
     "InteractionZone",
+    "NullDetectorSource",
     "NullPerception",
     "PerceptionSource",
     "SceneManifest",
+    "SignDetection",
     "VisionPerception",
+    "create_detector",
     "create_perception",
     "hand_positions",
     "load_dataset",

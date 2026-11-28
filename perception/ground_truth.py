@@ -41,6 +41,8 @@ class GroundTruthPerception:
         palms = hand_positions(sim.model, sim.data)
         events: list[SimulationEvent] = []
         for fan in self.manifest.fans:
+            if not fan.hand_reaching:
+                continue
             if not self.manifest.zone.contains(fan.hand):
                 continue
             fan_hand = np.asarray(fan.hand, dtype=float)

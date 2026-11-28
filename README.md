@@ -7,9 +7,10 @@
 - 真实 Unitree G1 29 自由度 MJCF 模型、网格、关节和执行器定义。
 - 四边形擂台：约 6.1 m 围绳内径、三层围绳、四角立柱、护垫、帆布台面、围裙和台阶。
 - 入场舞台、灯光架、发光入场通道。
-- 擂台两侧各 3 排观众席，共 48 个简化观众。
+- 擂台两侧各 3 排观众席，共 48 个坐姿观众；入场通道旁另有 6 名站立互动观众，带独立手部与应援牌。
+- 互动带：通道边缘到第一排护栏之间、机器人可以进入的击掌区域，带绿色 LED 边界。
 - 动作：行走、挥手、庆祝、鞠躬、待机、安全停止。
-- 3 个固定相机：全景、入口、场边。
+- 4 个固定相机：全景、入口、场边、互动前排。
 - 结构化事件输入、机器人状态读取、动作执行和 RGB 图像输出。
 - 急停／障碍事件优先，锁定后普通互动事件不会覆盖安全停止。
 
@@ -25,6 +26,8 @@ WWE-Robot-SchoolWork/
 ├── run_demo.py                  # 图形界面与无界面演示入口
 ├── requirements.txt
 ├── pyproject.toml
+├── docs/
+│   └── interaction-zone.md      # 互动区定义、坐标与 CV 约定
 ├── g1_arena/
 │   ├── simulation.py            # 统一仿真接口
 │   ├── controller.py            # G1 动作脚本与安全状态
@@ -33,6 +36,7 @@ WWE-Robot-SchoolWork/
 │   └── generate_scene.py        # 可参数化修改的场馆生成源码
 ├── assets/unitree_g1/
 │   ├── arena.xml                # 完整仿真场景
+│   ├── scene_manifest.json      # 互动区、观众手/牌、相机标定清单
 │   ├── g1.xml                   # G1 机器人模型
 │   ├── assets/                  # 官方网格
 │   └── LICENSE                  # G1 模型 BSD-3-Clause 许可证
@@ -76,7 +80,7 @@ python -m venv .venv
 .\.venv\Scripts\python.exe run_demo.py --action entrance --headless --seconds 5 --screenshot output\entrance.png
 ```
 
-可选相机：`overview`、`entrance`、`ringside`。
+可选相机：`overview`、`entrance`、`ringside`、`interaction_neg`。其中 `interaction_neg` 是互动前排的 CV 视角，适合检查观众手部、应援牌和机器人接近过程。
 
 ## 后续集成
 
@@ -109,9 +113,20 @@ with ArenaSimulation() as sim:
 - 感知层只报告事件；决策层选择行为；控制层执行动作。
 - `emergency_stop` 和 `obstacle_detected` 会锁定安全停止，调用 `reset()` 后才恢复普通动作。
 
+### 互动区（CV 约定）
+
+互动区不是看台座位，而是入场通道边缘到第一排护栏之间、机器人可以离开通道走进去的地带。当前场景先实现截图中的 `-y` 侧：6 名站立观众在护栏后，手和应援牌是独立几何体，机器人在绿色 LED 边界内与观众击掌。
+
+互动带坐标、观众手/牌锚点和 `interaction_neg` 相机参数统一由 `assets/unitree_g1/scene_manifest.json` 给出；CV、数据集和测试不要硬编码。完整定义和后续 `high_five` 事件约定见 [docs/interaction-zone.md](docs/interaction-zone.md)。
+
+```powershell
+# 从互动前排视角截一张图
+.\.venv\Scripts\python.exe run_demo.py --headless --seconds 1 --camera interaction_neg --screenshot output\interaction_neg.png
+```
+
 ## 修改场景与测试
 
-修改 `scripts/generate_scene.py` 中的尺寸、座位或材质参数，然后重新生成：
+修改 `scripts/generate_scene.py` 中的尺寸、座位或材质参数，然后重新生成 XML 和清单：
 
 ```powershell
 .\.venv\Scripts\python.exe scripts\generate_scene.py

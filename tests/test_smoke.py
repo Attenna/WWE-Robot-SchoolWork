@@ -2,9 +2,39 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import math
+from pathlib import Path
+
+import numpy as np
 
 from g1_arena import Action, ArenaSimulation, SimulationEvent
+from scripts.generate_scene import (
+    INTERACTION_BARRICADE_Y,
+    INTERACTION_FAN_COUNT,
+    INTERACTION_X_MAX,
+    INTERACTION_X_MIN,
+    INTERACTION_ZONE_Y_MAX,
+    INTERACTION_ZONE_Y_MIN,
+)
+
+
+ROOT = Path(__file__).resolve().parents[1]
+ARENA_PATH = ROOT / "assets" / "unitree_g1" / "arena.xml"
+MANIFEST_PATH = ROOT / "assets" / "unitree_g1" / "scene_manifest.json"
+
+
+def project_point(point: list[float], camera: dict[str, object]) -> tuple[float, float, float]:
+    """按 manifest 的 MuJoCo 相机约定投影到像素。"""
+    rotation = np.asarray(camera["R_wc"], dtype=float)
+    translation = np.asarray(camera["t_wc"], dtype=float)
+    camera_point = rotation.T @ (np.asarray(point, dtype=float) - translation)
+    assert camera_point[2] < 0.0
+    focal = 0.5 * float(camera["height"]) / math.tan(math.radians(float(camera["fovy_deg"])) / 2.0)
+    u = 0.5 * float(camera["width"]) + focal * camera_point[0] / -camera_point[2]
+    v = 0.5 * float(camera["height"]) - focal * camera_point[1] / -camera_point[2]
+    return float(u), float(v), float(-camera_point[2])
 
 
 def test_model_and_scene() -> None:
@@ -12,7 +42,52 @@ def test_model_and_scene() -> None:
         assert sim.model.nq == 36
         assert sim.model.nu == 29
         assert sim.model.ngeom >= 300
-        assert sim.model.ncam == 3
+        camera_names = {sim.model.camera(index).name for index in range(sim.model.ncam)}
+        assert {"overview", "entrance", "ringside", "interaction_neg"} <= camera_names
+
+
+def test_interaction_front_row_manifest() -> None:
+    xml = ARENA_PATH.read_text(encoding="utf-8")
+    manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+    assert manifest["schema_version"] == 1
+    assert manifest["scene_hash"] == hashlib.sha256(xml.encode("utf-8")).hexdigest()
+
+    zone = manifest["interaction_zone"]
+    assert zone["side"] == "neg"
+    assert zone["x"] == [round(INTERACTION_X_MIN, 3), round(INTERACTION_X_MAX, 3)]
+    assert zone["y"] == [INTERACTION_ZONE_Y_MIN, INTERACTION_ZONE_Y_MAX]
+    assert zone["barricade_y"] == INTERACTION_BARRICADE_Y
+    assert len(manifest["fans"]) == INTERACTION_FAN_COUNT
+    assert manifest["audience"] == {"seated": 48, "interaction": INTERACTION_FAN_COUNT}
+
+    with ArenaSimulation() as sim:
+        geom_names = {sim.model.geom(index).name for index in range(sim.model.ngeom)}
+        required_geoms = {
+            "barricade_int_neg",
+            "barricade_int_neg_top",
+            "interaction_zone_edge_aisle",
+            "interaction_zone_edge_barricade",
+            "interaction_zone_end_west",
+            "interaction_zone_end_east",
+        }
+        assert required_geoms <= geom_names
+        for fan in manifest["fans"]:
+            for suffix in ("legs", "body", "head", "arm", "hand", "sign", "sign_handle"):
+                assert f"{fan['id']}_{suffix}" in geom_names
+            hand = fan["hand"]
+            sign = fan["sign"]
+            assert zone["y"][0] < hand[1] < zone["y"][1]
+            assert 1.0 <= hand[2] <= 1.5
+            assert hand[1] > zone["barricade_y"]
+            assert 1.7 <= sign[2] <= 2.0
+
+        camera = manifest["cameras"]["interaction_neg"]
+        for fan in manifest["fans"]:
+            for point in (fan["hand"], fan["sign"]):
+                u, v, depth = project_point(point, camera)
+                assert depth > 0.0
+                assert 0.0 <= u < camera["width"]
+                assert 0.0 <= v < camera["height"]
 
 
 def test_walk_reaches_aisle_end() -> None:

@@ -26,7 +26,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--headless", action="store_true", help="不打开窗口，仅运行仿真")
     parser.add_argument("--seconds", type=float, default=8.0, help="无界面模式的仿真时长")
     parser.add_argument("--screenshot", type=Path, help="结束时保存相机图像")
-    parser.add_argument("--camera", choices=["overview", "entrance", "ringside"], default="overview")
+    parser.add_argument("--camera", choices=["overview", "entrance", "ringside", "interaction_neg"], default="overview")
     parser.add_argument("--width", type=int, default=1280)
     parser.add_argument("--height", type=int, default=720)
     return parser.parse_args()

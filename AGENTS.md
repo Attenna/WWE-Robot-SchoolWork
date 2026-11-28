@@ -14,6 +14,7 @@
 ```text
 WWE-Robot-SchoolWork/
 ├── run_demo.py               # 图形界面 / 无界面演示入口
+├── docs/interaction-zone.md  # 互动区定义、坐标与 CV 约定
 ├── g1_arena/
 │   ├── simulation.py         # ArenaSimulation：场景、状态、动作、渲染的统一入口
 │   ├── controller.py         # G1MotionController：29 关节 + 浮动基座的运动学脚本
@@ -21,6 +22,7 @@ WWE-Robot-SchoolWork/
 ├── scripts/generate_scene.py # 场馆生成源码（尺寸、座位、材质的唯一事实来源）
 ├── assets/unitree_g1/
 │   ├── arena.xml             # 完整仿真场景（由 generate_scene.py 生成）
+│   ├── scene_manifest.json   # 互动区、观众手/牌、相机标定清单（同脚本生成）
 │   ├── g1.xml                # G1 机器人模型
 │   └── assets/               # 官方网格，勿手工修改
 ├── tests/test_smoke.py       # 基础验收测试
@@ -37,7 +39,7 @@ pip install -r requirements.txt -r requirements-dev.txt
 python run_demo.py                 # 图形界面
 python run_demo.py --action entrance --headless --seconds 5 --screenshot output/entrance.png
 python -m pytest -q                # 提交前必须通过
-python scripts/generate_scene.py   # 修改场景参数后重新生成 arena.xml
+python scripts/generate_scene.py   # 重新生成 arena.xml 与 scene_manifest.json
 ```
 
 - `mujoco==4.0.1` 是固定版本，升级需单独提交并说明原因。
@@ -46,17 +48,18 @@ python scripts/generate_scene.py   # 修改场景参数后重新生成 arena.xml
 
 ## 接口契约（改动需同步文档与测试）
 
-- 坐标：x 沿入场通道指向擂台，y 指向侧方观众席，z 向上；单位米、秒、弧度；四元数顺序 `w, x, y, z`。
+- 坐标：x 沿入场通道指向擂台，y 指向侧方观众席（`±y` 各一侧，当前互动前排位于 `-y` 侧），z 向上；单位米、秒、弧度；四元数顺序 `w, x, y, z`。
 - 动作：`idle`、`walk`、`wave`、`celebrate`、`bow`、`stop`；`walk` 接受 `[x, y]` 或 `[x, y, z]`。
 - 事件：`crowd_cheering`、`audience_wave`、`obstacle_detected`、`emergency_stop`；`confidence >= 0.5` 才生效。
 - `emergency_stop` / `obstacle_detected` 会锁存安全停止，只有 `reset()` 能解除；锁存期间普通事件不得覆盖。
-- 相机名：`overview`、`entrance`、`ringside`；默认步长 1/120 s。
+- 相机名：`overview`、`entrance`、`ringside`、`interaction_neg`；默认步长 1/120 s。
 - `ArenaSimulation` 对外方法保持稳定：`execute`、`submit_event`、`step`、`get_state`、`render`、`reset`、`close`。
 - `G1MotionController` 需保留 `__init__(model)` 与 `update(dt) -> qpos` 契约，便于整体替换。
 
 ## 修改规则
 
-- 场馆几何只改 `scripts/generate_scene.py`，然后重新生成 `assets/unitree_g1/arena.xml`，两者必须在同一个提交里保持一致；不要直接手改生成出的 XML。
+- 场馆几何只改 `scripts/generate_scene.py`，然后重新生成 `assets/unitree_g1/arena.xml` 与 `assets/unitree_g1/scene_manifest.json`，三者必须在同一个提交里保持一致；不要直接手改生成出的 XML/JSON。
+- 互动区坐标、观众手/牌锚点和 CV 相机参数以 `scene_manifest.json` 为唯一事实来源；CV 和数据集不得硬编码，测试只校验清单与生成脚本一致。
 - `assets/unitree_g1/assets/` 是上游官方网格，禁止重导出或覆盖；`LICENSE` 必须保留。
 - `g1_arena/` 保持轻依赖，不要引入 torch、ROS 等重框架；新模块通过接口组合，不要耦合进仿真核心。
 - 改动公开行为时，同步更新 `README.md`、本文件中的契约和 `tests/test_smoke.py`。

@@ -284,6 +284,7 @@ def build_manifest(xml: str, scene_hash: str | None = None) -> dict[str, object]
         fans.append(
             {
                 "id": f"fan_int_neg_{index}",
+                "hand_side": "raised",
                 "x": round(x, 3),
                 "body": [round(x, 3), INTERACTION_FAN_Y, 0.95],
                 "hand": [round(x, 3), INTERACTION_HAND_Y, INTERACTION_HAND_Z],

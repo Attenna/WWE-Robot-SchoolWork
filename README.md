@@ -12,6 +12,7 @@
 - 动作：行走、挥手、庆祝、鞠躬、待机、安全停止。
 - 4 个固定相机：全景、入口、场边、互动前排。
 - 结构化事件输入、机器人状态读取、动作执行和 RGB 图像输出。
+- CV 感知层：场景清单、G1 掌心 FK、击掌状态机和 `high_five` 事件（仿真 ground truth 适配器）。
 - 急停／障碍事件优先，锁定后普通互动事件不会覆盖安全停止。
 
 > **动作边界**：当前行走和动作采用运动学脚本，直接设置关节角及基座位姿，保证演示稳定、路线可重复。它不是基于接触力平衡的动态双足步行策略。后续接入 RL、MPC 或导航模块时，可替换 `G1MotionController`，场景和接口无需重写。
@@ -32,6 +33,11 @@ WWE-Robot-SchoolWork/
 │   ├── simulation.py            # 统一仿真接口
 │   ├── controller.py            # G1 动作脚本与安全状态
 │   └── events.py                # 统一事件数据结构
+├── perception/
+│   ├── manifest.py              # 场景清单、互动带、相机投影
+│   ├── robot.py                 # G1 掌心 FK 近似
+│   ├── high_five.py             # 击掌状态机与事件
+│   └── ground_truth.py          # 仿真 ground truth 适配器
 ├── scripts/
 │   └── generate_scene.py        # 可参数化修改的场馆生成源码
 ├── assets/unitree_g1/
@@ -40,7 +46,9 @@ WWE-Robot-SchoolWork/
 │   ├── g1.xml                   # G1 机器人模型
 │   ├── assets/                  # 官方网格
 │   └── LICENSE                  # G1 模型 BSD-3-Clause 许可证
-└── tests/test_smoke.py          # 基础验收测试
+└── tests/
+    ├── test_smoke.py            # 基础验收测试
+    └── test_perception.py       # 感知层契约与击掌测试
 ```
 
 ## 直接运行（Windows）
@@ -82,6 +90,29 @@ python -m venv .venv
 
 可选相机：`overview`、`entrance`、`ringside`、`interaction_neg`。其中 `interaction_neg` 是互动前排的 CV 视角，适合检查观众手部、应援牌和机器人接近过程。
 
+### 感知层（Ground Truth）
+
+`--action interaction` 会让机器人走到互动带的中间观众前，随后挥手；`--perception ground_truth` 用清单里的观众手锚点和 G1 掌心 FK 计算距离，产生一次 `high_five` 事件。事件目前只打印并写入 `last_event`，动作映射留给决策/控制层。
+
+```powershell
+# 图形界面：走到互动带、挥手、打印 high_five 事件
+.\.venv\Scripts\python.exe run_demo.py --action interaction --perception ground_truth
+
+# 无界面：8 秒跑完整个击掌流程并截图
+.\.venv\Scripts\python.exe run_demo.py --action interaction --perception ground_truth --headless --seconds 8 --camera interaction_neg --screenshot output\high_five.png
+```
+
+感知层的公开入口：
+
+```python
+from perception import GroundTruthPerception
+
+perception = GroundTruthPerception()
+for event in perception.poll(sim):
+    print(event.to_dict())
+    sim.submit_event(event)  # 事件进入 last_event；动作映射由决策/控制层添加
+```
+
 ## 后续集成
 
 ```python
@@ -109,15 +140,15 @@ with ArenaSimulation() as sim:
 - 坐标：x 轴沿通道指向擂台，y 轴指向侧方观众席，z 轴向上。
 - 单位：米、秒、弧度；四元数顺序为 `w, x, y, z`。
 - 动作：`idle`、`walk`、`wave`、`celebrate`、`bow`、`stop`。
-- 示例事件：`crowd_cheering`、`audience_wave`、`obstacle_detected`、`emergency_stop`。
-- 感知层只报告事件；决策层选择行为；控制层执行动作。
+- 示例事件：`crowd_cheering`、`audience_wave`、`obstacle_detected`、`emergency_stop`；CV 还可提交 `high_five`（一次击掌）。
+- 感知层只报告事件；决策层选择行为；控制层执行动作。`high_five` 的动作映射待控制层添加。
 - `emergency_stop` 和 `obstacle_detected` 会锁定安全停止，调用 `reset()` 后才恢复普通动作。
 
 ### 互动区（CV 约定）
 
 互动区不是看台座位，而是入场通道边缘到第一排护栏之间、机器人可以离开通道走进去的地带。当前场景先实现截图中的 `-y` 侧：6 名站立观众在护栏后，手和应援牌是独立几何体，机器人在绿色 LED 边界内与观众击掌。
 
-互动带坐标、观众手/牌锚点和 `interaction_neg` 相机参数统一由 `assets/unitree_g1/scene_manifest.json` 给出；CV、数据集和测试不要硬编码。完整定义和后续 `high_five` 事件约定见 [docs/interaction-zone.md](docs/interaction-zone.md)。
+互动带坐标、观众手/牌锚点和 `interaction_neg` 相机参数统一由 `assets/unitree_g1/scene_manifest.json` 给出；CV 和数据集不要硬编码。完整定义和 `high_five` 事件约定见 [docs/interaction-zone.md](docs/interaction-zone.md)。
 
 ```powershell
 # 从互动前排视角截一张图

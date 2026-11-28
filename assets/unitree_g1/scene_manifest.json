@@ -44,6 +44,7 @@
   "fans": [
     {
       "id": "fan_int_neg_0",
+      "hand_side": "raised",
       "x": -8.9,
       "body": [
         -8.9,
@@ -65,6 +66,7 @@
     },
     {
       "id": "fan_int_neg_1",
+      "hand_side": "raised",
       "x": -8.16,
       "body": [
         -8.16,
@@ -86,6 +88,7 @@
     },
     {
       "id": "fan_int_neg_2",
+      "hand_side": "raised",
       "x": -7.42,
       "body": [
         -7.42,
@@ -107,6 +110,7 @@
     },
     {
       "id": "fan_int_neg_3",
+      "hand_side": "raised",
       "x": -6.68,
       "body": [
         -6.68,
@@ -128,6 +132,7 @@
     },
     {
       "id": "fan_int_neg_4",
+      "hand_side": "raised",
       "x": -5.94,
       "body": [
         -5.94,
@@ -149,6 +154,7 @@
     },
     {
       "id": "fan_int_neg_5",
+      "hand_side": "raised",
       "x": -5.2,
       "body": [
         -5.2,

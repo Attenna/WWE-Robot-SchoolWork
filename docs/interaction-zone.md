@@ -8,7 +8,7 @@
 
 - 互动区不是看台座位，不在观众席内部。
 - 当前先实现截图中的 `-y` 侧；`+y` 侧后续按同一套参数镜像。
-- 通道、看台、互动前排的坐标只以 `assets/unitree_g1/scene_manifest.json` 为准；CV、数据集和测试不要硬编码。
+- 通道、看台、互动前排的坐标只以 `assets/unitree_g1/scene_manifest.json` 为准；CV 和数据集不要硬编码，测试校验清单与生成脚本一致。
 
 ## 当前几何
 
@@ -53,6 +53,7 @@
   "fans": [
     {
       "id": "fan_int_neg_0",
+      "hand_side": "raised",
       "hand": [-8.9, -3.02, 1.3],
       "sign": [-8.9, -3.05, 1.85],
       "hand_geom": "fan_int_neg_0_hand",
@@ -88,12 +89,12 @@ f = 0.5 * H / tan(radians(fovy) / 2)
 
 不要直接套用 OpenCV 的 z-forward 公式。真机相机需要另外提供畸变参数和 `T_world_cam`；仿真相机无畸变。
 
-## 规划中的 CV 事件
+## CV 事件（Ground Truth 已实现）
 
-CV 只提交结构化事件，不直接写关节。推荐事件名：
+CV 只提交结构化事件，不直接写关节。`perception.GroundTruthPerception` 已经用清单和 G1 掌心 FK 跑通 `high_five` 事件；视觉适配器后续实现同样的 `poll(sim)` 接口。
 
-- `high_five`：机器人掌心与观众掌心距离 <0.30 m、相对接近速度 >0、持续 ≥0.1 s、同一观众冷却 1 s；一次经过只发一次。
-- `audience_sign_detected`：需要机器人对牌子内容反应时再启用；文字放 `metadata.text`。
+- `high_five`：机器人掌心与观众掌心距离 <0.30 m、相对接近速度 >0、持续 ≥0.1 s、同一观众冷却 1 s；一次经过只发一次。参数集中在 `perception.HighFiveConfig`。
+- `audience_sign_detected`：需要机器人对牌子内容反应时再启用；文字放 `metadata.text`（当前未实现）。
 
 自定义字段必须放在 `metadata`，`SimulationEvent.from_dict` 会丢弃未知顶层字段：
 
@@ -102,22 +103,30 @@ CV 只提交结构化事件，不直接写关节。推荐事件名：
   "event": "high_five",
   "confidence": 0.92,
   "timestamp": 12.4,
-  "source": "vision",
+  "source": "ground_truth",
   "position": [-6.68, -3.02, 1.3],
   "metadata": {
     "fan_id": "fan_int_neg_3",
-    "track_id": 7,
-    "side": "neg",
-    "hand": "right",
+    "hand": "raised",
     "robot_hand": "right",
-    "distance_m": 0.18,
-    "bbox": [612, 288, 668, 344],
-    "camera": "interaction_neg"
+    "distance_m": 0.24,
+    "fan_hand": [-6.68, -3.02, 1.3],
+    "robot_palm": [-6.73, -2.93, 1.09],
+    "mode": "ground_truth"
   }
 }
 ```
 
-当前 `submit_event` 只映射 `crowd_cheering` / `audience_wave` / 安全事件；`high_five` 的决策/动作映射在感知 PR 中加入。`emergency_stop` / `obstacle_detected` 的安全锁存优先于任何 CV 事件。
+视觉适配器会在 `metadata` 里追加 `track_id`、`bbox`、`camera`，并把 `source` 改为 `vision`。当前 `submit_event` 只映射 `crowd_cheering` / `audience_wave` / 安全事件；`high_five` 只进入 `last_event`，动作映射由决策/控制层添加。`emergency_stop` / `obstacle_detected` 的安全锁存优先于任何 CV 事件。
+
+```python
+from perception import GroundTruthPerception
+
+perception = GroundTruthPerception()
+for event in perception.poll(sim):
+    print(event.to_dict())
+    sim.submit_event(event)
+```
 
 ## 验收
 
@@ -128,7 +137,7 @@ CV 只提交结构化事件，不直接写关节。推荐事件名：
 
 ## 后续
 
-1. `perception/` 接口 + `GroundTruthPerception`（先用 manifest 和仿真状态跑通事件闭环）。
-2. 合成数据渲染 + 手/牌检测基线。
+1. ~~`perception/` 接口 + `GroundTruthPerception`~~（已完成，见 `perception/`）。
+2. 合成数据渲染 + 手/牌检测基线，接 `VisionPerception`，追加 `bbox`/`track_id`/`camera`。
 3. `high_five` 事件接入决策/控制，新增 `Action.HIGH_FIVE` 或临时映射到 `WAVE`。
 4. 镜像 `+y` 侧，并按最新版通道长度重新生成清单。

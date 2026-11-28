@@ -19,9 +19,10 @@ WWE-Robot-SchoolWork/
 │   ├── simulation.py         # ArenaSimulation：场景、状态、动作、渲染的统一入口
 │   ├── controller.py         # G1MotionController：29 关节 + 浮动基座的运动学脚本
 │   └── events.py             # SimulationEvent：感知/决策/仿真之间唯一的事件结构
-├── perception/               # CV 感知层：清单、掌心 FK、击掌、数据集、ground truth 适配器
+├── perception/               # CV 感知层：清单、掌心 FK、击掌、数据集、基线、评估、适配器
 ├── scripts/generate_scene.py # 场馆生成源码（尺寸、座位、材质的唯一事实来源）
 ├── scripts/render_cv_dataset.py # 合成 CV 数据集渲染器（输出到 output/，不入库）
+├── scripts/eval_baseline.py  # 传统基线的数据集/事件评估
 ├── assets/unitree_g1/
 │   ├── arena.xml             # 完整仿真场景（由 generate_scene.py 生成）
 │   ├── scene_manifest.json   # 互动区、观众手/牌、相机标定清单（同脚本生成）
@@ -42,6 +43,9 @@ python run_demo.py                 # 图形界面
 python run_demo.py --action entrance --headless --seconds 5 --screenshot output/entrance.png
 python run_demo.py --action interaction --perception ground_truth --headless --seconds 8
 python scripts/render_cv_dataset.py --frames 20 --width 960 --height 540
+pip install -r requirements-cv.txt             # 可选：传统基线
+python scripts/eval_baseline.py --dataset output/cv_dataset
+python scripts/eval_baseline.py --sequence --width 960 --height 540
 python -m pytest -q                # 提交前必须通过
 python scripts/generate_scene.py   # 重新生成 arena.xml 与 scene_manifest.json
 ```
@@ -67,6 +71,7 @@ python scripts/generate_scene.py   # 重新生成 arena.xml 与 scene_manifest.j
 - 互动区坐标、观众手/牌锚点和 CV 相机参数以 `scene_manifest.json` 为唯一事实来源；CV 和数据集不得硬编码，测试只校验清单与生成脚本一致。
 - `assets/unitree_g1/assets/` 是上游官方网格，禁止重导出或覆盖；`LICENSE` 必须保留。
 - `g1_arena/` 保持轻依赖，不要引入 torch、ROS 等重框架；新模块通过接口组合，不要耦合进仿真核心。
+- OpenCV 只放在 `requirements-cv.txt` / `pyproject.toml` 的 `cv` extra 中；核心安装不引入 torch/OpenCV。传统基线在缺少 OpenCV 时允许测试跳过。
 - 改动公开行为时，同步更新 `README.md`、本文件中的契约和 `tests/test_smoke.py`。
 - 文档与注释使用中文，标识符与提交类型使用英文；不提交密钥、个人路径、截图和 `output/` 产物。
 - 无法在本机验证的改动（例如需要图形界面）要在提交说明或 PR 中明确写出未验证项与原因。

@@ -9,5 +9,8 @@ description = "Unitree G1 MuJoCo entrance and audience-interaction simulation ba
 requires-python = ">=3.10"
 dependencies = ["mujoco==4.0.1", "numpy>=2.0", "pillow>=10.0"]
 
+[project.optional-dependencies]
+cv = ["opencv-python-headless>=4.9"]
+
 [tool.setuptools.packages.find]
 include = ["g1_arena*", "perception*"]

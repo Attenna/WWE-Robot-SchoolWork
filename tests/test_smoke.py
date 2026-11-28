@@ -71,15 +71,21 @@ def test_interaction_front_row_manifest() -> None:
             "interaction_zone_end_east",
         }
         assert required_geoms <= geom_names
+        assert any(fan["hand_reaching"] for fan in manifest["fans"])
+        assert any(not fan["hand_reaching"] for fan in manifest["fans"])
+        assert any(fan["sign_raised"] for fan in manifest["fans"])
+        assert any(not fan["sign_raised"] for fan in manifest["fans"])
         for fan in manifest["fans"]:
             for suffix in ("legs", "body", "head", "arm", "hand", "sign", "sign_handle"):
                 assert f"{fan['id']}_{suffix}" in geom_names
             hand = fan["hand"]
             sign = fan["sign"]
-            assert zone["y"][0] < hand[1] < zone["y"][1]
-            assert 1.0 <= hand[2] <= 1.5
-            assert hand[1] > zone["barricade_y"]
-            assert 1.7 <= sign[2] <= 2.0
+            if fan["hand_reaching"]:
+                assert zone["y"][0] < hand[1] < zone["y"][1]
+                assert 1.0 <= hand[2] <= 1.5
+                assert hand[1] > zone["barricade_y"]
+            if fan["sign_raised"]:
+                assert 1.7 <= sign[2] <= 2.0
 
         camera = manifest["cameras"]["interaction_neg"]
         for fan in manifest["fans"]:

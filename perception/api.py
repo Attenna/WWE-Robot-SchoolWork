@@ -88,6 +88,7 @@ def create_perception(
             camera=camera,
             width=width,
             height=height,
+            detect_non_reaching=False,  # 事件路径只考虑伸手的观众
         )
         high_five_config = config or HighFiveConfig(source="vision", mode="color_baseline")
         return VisionPerception(

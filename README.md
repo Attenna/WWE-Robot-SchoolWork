@@ -35,6 +35,7 @@ WWE-Robot-SchoolWork/
 ├── docs/
 │   ├── interaction-zone.md      # 互动区定义、坐标与 CV 约定
 │   ├── perception-integration.md # 视觉检测对接 API、事件与故障排查
+│   ├── ccc-handoff.md           # BBB→CCC 原始检测/语义分工
 │   └── real-data-and-wwe.md     # 真实手部数据、WWE 素材与版权/评测协议
 ├── g1_arena/
 │   ├── simulation.py            # 统一仿真接口
@@ -45,6 +46,7 @@ WWE-Robot-SchoolWork/
 │   ├── robot.py                 # G1 掌心 FK 近似
 │   ├── high_five.py             # 击掌状态机与事件
 │   ├── api.py                   # 公开 PerceptionSource / create_perception
+│   ├── detection.py             # 原始手/牌检测流 DetectionFrame / create_detector
 │   ├── dataset.py               # 合成数据集标签 schema 与读取
 │   ├── vision.py                # 检测器 Protocol + 视觉事件适配器
 │   ├── baseline.py              # 传统颜色/轮廓基线（可选 OpenCV）
@@ -70,7 +72,8 @@ WWE-Robot-SchoolWork/
     ├── test_evaluation.py       # 检测/事件指标测试
     ├── test_baseline.py         # 传统基线数据集验收（需 OpenCV）
     ├── test_real_eval.py        # 真实评估集 schema 与 clip 计划测试
-    └── test_perception_api.py   # 公开感知接口测试
+    ├── test_perception_api.py   # 公开感知接口测试
+    └── test_detection_api.py    # 原始手/牌检测流测试
 ```
 
 ## 直接运行（Windows）
@@ -152,7 +155,16 @@ for event in perception.poll(sim):
 .\.venv\Scripts\python.exe run_demo.py --action interaction --perception ground_truth
 ```
 
-完整 API、事件字段、真实相机接入和新模型接入步骤见 [docs/perception-integration.md](docs/perception-integration.md)。
+如果 CCC 要做“是否举牌/是否伸手”的语义，直接用原始检测流：
+
+```python
+from perception import create_detector
+
+detector = create_detector("color", camera="interaction_neg")
+frame = detector.detect(sim)   # frame.hands / frame.signs / frame.timestamp
+```
+
+完整 API、事件字段、真实相机接入和新模型接入步骤见 [docs/perception-integration.md](docs/perception-integration.md)；BBB→CCC 分工见 [docs/ccc-handoff.md](docs/ccc-handoff.md)。
 
 ### 合成数据集
 
@@ -200,10 +212,10 @@ manifest, frames = load_dataset("output/cv_dataset")
 
 | 指标 | 结果 |
 |---|---|
-| 手 bbox P / R / F1 | 1.00 / 1.00 / 1.00 |
-| 应援牌 P / R / F1 | 0.72 / 0.65 / 0.68 |
+| 手 bbox P / R / F1（原始检测，含不伸手样本） | 0.75 / 0.94 / 0.83 |
+| 应援牌 P / R / F1 | 0.81 / 0.71 / 0.76 |
 | 单帧 high-five candidate | 1.00 / 1.00 / 1.00 |
-| 检测器 runtime p50 | ≈1.1 ms |
+| 检测器 runtime p50 | ≈1.0 ms |
 
 序列模式（960×540）得到 1 个 TP、0 FP/FN；处理耗时 p50≈45 ms（含 MuJoCo 渲染），事件时间偏移 0（同步仿真，不代表真实相机延迟）。
 

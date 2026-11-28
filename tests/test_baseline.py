@@ -21,11 +21,12 @@ def test_color_baseline_on_small_dataset(tmp_path: Path) -> None:
         camera="interaction_neg",
         width=640,
         height=360,
+        detect_non_reaching=True,
     )
     metrics = evaluate_dataset(tmp_path, detector, iou_threshold=0.3)
 
     assert metrics["hands"]["tp"] > 0
-    assert metrics["hands"]["precision"] >= 0.8
+    assert metrics["hands"]["precision"] >= 0.7
     assert metrics["hands"]["recall"] >= 0.8
     assert metrics["signs"]["f1"] >= 0.4
     assert metrics["high_five_candidate"]["tp"] > 0

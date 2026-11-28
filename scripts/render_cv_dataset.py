@@ -83,8 +83,9 @@ def place_robot(
     """沿互动带随机放机器人；near 时面向观众，far 时留在通道上。"""
     zone = manifest.zone
     if near:
-        # 靠近某一名观众，保证数据集中有足够的正样本。
-        anchor = manifest.fans[int(rng.integers(len(manifest.fans)))]
+        # 正样本只选伸手的观众；挥手时保证距离落进 high-five 候选区。
+        candidates = [fan for fan in manifest.fans if fan.hand_reaching] if wave else manifest.fans
+        anchor = candidates[int(rng.integers(len(candidates)))]
         # wave 姿态下右掌相对基座约 +0.29 m（+x），把基座放在观众左侧对齐。
         x = float(anchor.hand[0]) - 0.29 + rng.uniform(-0.03, 0.03)
         y = zone.y[0] + rng.uniform(0.48, 0.60)
@@ -247,6 +248,8 @@ def render_dataset(
                     fan_labels.append(
                         {
                             "fan_id": fan.id,
+                            "hand_reaching": fan.hand_reaching,
+                            "sign_raised": fan.sign_raised,
                             "hand": anchor_label(fan.hand, fan.hand_geom, sim.model, segmentation, calibration, width, height),
                             "sign": anchor_label(fan.sign, fan.sign_geom, sim.model, segmentation, calibration, width, height),
                         }
@@ -254,6 +257,8 @@ def render_dataset(
 
                 candidate = None
                 for fan in manifest.fans:
+                    if not fan.hand_reaching:
+                        continue
                     for side, palm in palms.items():
                         distance = float(np.linalg.norm(np.asarray(palm) - np.asarray(fan.hand)))
                         if candidate is None or distance < candidate["distance_m"]:

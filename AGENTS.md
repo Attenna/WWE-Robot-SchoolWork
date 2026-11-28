@@ -16,6 +16,7 @@ WWE-Robot-SchoolWork/
 ├── run_demo.py               # 图形界面 / 无界面演示入口
 ├── docs/interaction-zone.md  # 互动区定义、坐标与 CV 约定
 ├── docs/perception-integration.md # 视觉检测公开 API、事件与对接步骤
+├── docs/ccc-handoff.md       # BBB→CCC 原始检测/语义分工
 ├── docs/real-data-and-wwe.md # 真实手部数据、WWE 素材与版权/评测协议
 ├── g1_arena/
 │   ├── simulation.py         # ArenaSimulation：场景、状态、动作、渲染的统一入口
@@ -68,6 +69,7 @@ python scripts/generate_scene.py   # 重新生成 arena.xml 与 scene_manifest.j
 - 事件：`crowd_cheering`、`audience_wave`、`obstacle_detected`、`emergency_stop`；`confidence >= 0.5` 才生效。
 - CV 可提交 `high_five`（一次击掌，`metadata` 含 `fan_id`、`hand`、`robot_hand`、`distance_m`）；当前只进入 `last_event`，动作映射由决策/控制层添加。
 - 感知公开接口：`PerceptionSource.poll(sim) -> list[SimulationEvent]` / `reset()`；检测器实现 `HandDetector.detect(frame, timestamp) -> list[HandDetection]`；`create_perception("none"|"ground_truth"|"color")`。对接细节见 `docs/perception-integration.md`。
+- 原始检测接口：`DetectorSource.detect(sim) -> DetectionFrame`（hands+signs）/ `process(frame, timestamp)`；`create_detector("none"|"ground_truth"|"color")`。语义（举牌/伸手/击掌）归 CCC，见 `docs/ccc-handoff.md`。
 - `emergency_stop` / `obstacle_detected` 会锁存安全停止，只有 `reset()` 能解除；锁存期间普通事件不得覆盖。
 - 相机名：`overview`、`entrance`、`ringside`、`interaction_neg`；默认步长 1/120 s。
 - `ArenaSimulation` 对外方法保持稳定：`execute`、`submit_event`、`step`、`get_state`、`render`、`reset`、`close`。

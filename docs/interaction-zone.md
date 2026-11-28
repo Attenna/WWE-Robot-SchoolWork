@@ -19,9 +19,12 @@
 | 入场通道 | x `[-11.45, -3.75]`，y `[-1.10, 1.10]`，台面 z≈0.08 | 原场景不变 |
 | 互动带 | x `[-9.30, -4.80]`，y `[-3.10, -1.20]`，z `[0, 2.10]` | 机器人可进入；CV ROI |
 | 互动护栏 | y=`-3.10`，高 1.0 | 观众伸手的边界 |
-| 站立观众 | y=`-3.65`，6 人 | `fan_int_neg_0` … `fan_int_neg_5` |
-| 手 | y=`-3.02`，z=`1.30` | 独立 `*_hand` geom |
-| 应援牌 | y=`-3.05`，z=`1.85` | 独立 `*_sign` geom |
+| 站立观众 | y=`-3.65`，6 人 | `fan_int_neg_0` … `fan_int_neg_5`；含举牌/落牌、伸手/收手变体 |
+| 手（伸手） | y=`-3.02`，z=`1.30` | `hand_reaching=true`；独立 `*_hand` geom |
+| 手（收手） | y≈`-3.62`，z≈`0.95` | `hand_reaching=false`；护栏后/下方，通常不可见 |
+| 应援牌（举起） | y=`-3.05`，z=`1.85` | `sign_raised=true`；独立 `*_sign` geom |
+| 应援牌（放下） | y≈`-3.30`，z≈`1.15` | `sign_raised=false`；护栏后，部分可见 |
+| 正样本 | `fan_int_neg_3` | 举牌 + 伸手；`run_demo --action interaction` 使用 |
 | CV 相机 | `interaction_neg` | 覆盖互动前排和机器人 |
 
 互动带长度由通道长度推导：`INTERACTION_X_MIN = AISLE_X_MIN + 2.15`，`INTERACTION_X_MAX = AISLE_X_MAX - 1.05`。人数按约 0.8 m 间距计算。最新版通道加长后，重新运行生成脚本即可，CV 不需要改坐标。
@@ -54,6 +57,8 @@
     {
       "id": "fan_int_neg_0",
       "hand_side": "raised",
+      "hand_reaching": true,
+      "sign_raised": true,
       "hand": [-8.9, -3.02, 1.3],
       "sign": [-8.9, -3.05, 1.85],
       "hand_geom": "fan_int_neg_0_hand",
@@ -175,7 +180,7 @@ manifest, frames = load_dataset("output/cv_dataset")
 .\.venv\Scripts\python.exe scripts\eval_baseline.py --sequence --width 960 --height 540
 ```
 
-数据集指标由 `perception/evaluation.py` 计算：bbox IoU 匹配、事件时空匹配、latency summary。参考 8 帧 640×360 seed 1：手 P/R/F1 = 1.00/1.00/1.00，应援牌 = 0.72/0.65/0.68，单帧 high-five candidate = 1.00/1.00/1.00，检测器 runtime p50≈1.1 ms。序列模式 960×540 为 1 TP/0 FP/0 FN，处理耗时 p50≈45 ms（含渲染），事件时间偏移 0（同步仿真，不代表真实相机延迟）。
+数据集指标由 `perception/evaluation.py` 计算：bbox IoU 匹配、事件时空匹配、latency summary。参考 8 帧 640×360 seed 1（原始检测，含不伸手样本）：手 P/R/F1 = 0.75/0.94/0.83，应援牌 = 0.81/0.71/0.76，单帧 high-five candidate = 1.00/1.00/1.00，检测器 runtime p50≈1.0 ms。序列模式 960×540 为 1 TP/0 FP/0 FN，处理耗时 p50≈45 ms（含渲染），事件时间偏移 0（同步仿真，不代表真实相机延迟）。
 
 ## 验收
 

@@ -42,6 +42,10 @@ def test_render_dataset_small(tmp_path: Path) -> None:
         with Image.open(image_path) as image:
             assert image.size == (320, 240)
 
+        assert any(fan.hand_reaching for fan in label.fans)
+        assert any(not fan.hand_reaching for fan in label.fans)
+        assert any(fan.sign_raised for fan in label.fans)
+        assert any(not fan.sign_raised for fan in label.fans)
         for fan in label.fans:
             for anchor in (fan.hand, fan.sign):
                 if anchor.bbox is not None:

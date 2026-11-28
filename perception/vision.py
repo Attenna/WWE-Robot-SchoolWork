@@ -32,6 +32,20 @@ class HandDetection:
     camera: str = ""
 
 
+@dataclass(frozen=True)
+class SignDetection:
+    """检测器输出的应援牌观测。
+
+    这是原始检测，不包含“是否举起”的语义；语义由 CCC 的决策层判断。
+    """
+
+    fan_id: str
+    world: tuple[float, float, float]
+    bbox: tuple[int, int, int, int] | None
+    confidence: float
+    camera: str = ""
+
+
 class HandDetector(Protocol):
     """视觉模型/传统检测器需要实现的接口。"""
 

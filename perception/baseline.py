@@ -14,19 +14,11 @@ import cv2
 import numpy as np
 
 from .manifest import SceneManifest, load_manifest
-from .vision import HandDetection
+from .vision import HandDetection, SignDetection
 
 
 SKIN_LOWER = np.array([0, 25, 50], dtype=np.uint8)
 SKIN_UPPER = np.array([35, 210, 255], dtype=np.uint8)
-
-
-@dataclass(frozen=True)
-class SignDetection:
-    fan_id: str
-    world: tuple[float, float, float]
-    bbox: tuple[int, int, int, int]
-    confidence: float
 
 
 class ColorContourDetector:
@@ -39,6 +31,7 @@ class ColorContourDetector:
         width: int = 1280,
         height: int = 720,
         min_confidence: float = 0.5,
+        detect_non_reaching: bool = True,
     ) -> None:
         if width <= 0 or height <= 0:
             raise ValueError("width/height 必须大于 0")
@@ -48,6 +41,7 @@ class ColorContourDetector:
         self.width = int(width)
         self.height = int(height)
         self.min_confidence = float(min_confidence)
+        self.detect_non_reaching = bool(detect_non_reaching)
 
         scale = (self.width / 1280.0) ** 2
         self._hand_radius = max(12, int(28 * self.width / 1280.0))
@@ -59,7 +53,10 @@ class ColorContourDetector:
         self._sign_max_area = max(500, int(40000 * scale))
         self._sign_area_ref = max(1.0, 3000.0 * scale)
 
-        self._hand_priors = self._priors([(fan.id, fan.hand) for fan in self.manifest.fans], self._hand_radius)
+        hand_fans = self.manifest.fans if self.detect_non_reaching else [
+            fan for fan in self.manifest.fans if fan.hand_reaching
+        ]
+        self._hand_priors = self._priors([(fan.id, fan.hand) for fan in hand_fans], self._hand_radius)
         self._sign_priors = self._priors([(fan.id, fan.sign) for fan in self.manifest.fans], self._sign_radius)
 
     def _priors(self, items: list[tuple[str, tuple[float, float, float]]], margin: int):
@@ -194,6 +191,7 @@ class ColorContourDetector:
                     world=world,
                     bbox=bbox,
                     confidence=float(confidence),
+                    camera=self.camera_name,
                 )
             )
         return detections
